@@ -13,6 +13,24 @@ async function throttle(url) {
   lastHit.set(host, Date.now());
 }
 
+/**
+ * Strip credentials out of a URL before it can reach a log, an error banner,
+ * or a screenshot. Apify passes the API token as a query parameter, so any
+ * error message quoting the raw URL would expose it.
+ */
+export function redactUrl(url) {
+  try {
+    const u = new URL(url);
+    for (const key of ['token', 'apiKey', 'api_key', 'access_token', 'key', 'secret']) {
+      if (u.searchParams.has(key)) u.searchParams.set(key, '***');
+    }
+    return u.toString();
+  } catch {
+    // Not a parseable URL -- scrub anything that looks like a token anyway.
+    return String(url).replace(/([?&](?:token|apiKey|api_key|access_token|key|secret)=)[^&\s]+/gi, '$1***');
+  }
+}
+
 export async function fetchText(url, opts = {}) {
   await throttle(url);
   const ctrl = new AbortController();
@@ -30,7 +48,7 @@ export async function fetchText(url, opts = {}) {
       ...opts,
     });
     if (!res.ok) {
-      const err = new Error(`HTTP ${res.status} ${res.statusText} for ${url}`);
+      const err = new Error(`HTTP ${res.status} ${res.statusText} for ${redactUrl(url)}`);
       err.status = res.status;
       throw err;
     }

@@ -54,7 +54,27 @@ export async function fetchFromApify(cfg, { onProgress = () => {} } = {}) {
   let items;
   if (mode === 'last') {
     onProgress(`Reading last Apify run of ${actorId}`);
-    items = await lastRunItems(API, id, token, maxItems);
+    try {
+      items = await lastRunItems(API, id, token, maxItems);
+    } catch (err) {
+      // A 404 here is ambiguous and the raw status is useless to act on, so
+      // name both causes and what to do about each.
+      if (err.status === 404) {
+        const e = new Error(
+          `Apify has no completed run for Actor "${actorId}". Either the Actor ID is wrong, ` +
+          `or it exists but has never finished a run. Open the Actor in Apify Console, check ` +
+          `the ID in its page URL, and press Start once — then refresh here.`
+        );
+        e.code = 'APIFY_NO_RUN';
+        throw e;
+      }
+      if (err.status === 401 || err.status === 403) {
+        const e = new Error('Apify rejected the API token. Check it in Settings.');
+        e.code = 'APIFY_AUTH';
+        throw e;
+      }
+      throw err;
+    }
   } else {
     onProgress(`Running Apify Actor ${actorId} (this can take a few minutes)`);
     try {

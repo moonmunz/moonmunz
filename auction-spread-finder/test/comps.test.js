@@ -74,3 +74,21 @@ test('sold comps must not be discounted a second time', () => {
   assert.ok(sold.estimatedSalePrice > asks.estimatedSalePrice,
     'treating sold data as asks would understate every spread');
 });
+
+test('URLs in error messages never carry the API token', async () => {
+  const { redactUrl } = await import('../src/http.js');
+  const real = 'https://api.apify.com/v2/acts/x~y/runs/last/dataset/items'
+    + '?token=apify_api_SECRETVALUE123&status=SUCCEEDED&limit=500';
+
+  const safe = redactUrl(real);
+  assert.ok(!safe.includes('SECRETVALUE123'), 'token must not survive redaction');
+  assert.ok(safe.includes('token=***'));
+  // Non-secret parameters stay, so the message is still diagnosable.
+  assert.ok(safe.includes('status=SUCCEEDED'));
+  assert.ok(safe.includes('/acts/x~y/'));
+});
+
+test('redactUrl scrubs even unparseable input', async () => {
+  const { redactUrl } = await import('../src/http.js');
+  assert.ok(!redactUrl('not a url ?token=LEAKED').includes('LEAKED'));
+});
