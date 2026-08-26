@@ -97,6 +97,23 @@ body {
 .settings .inline { display: flex; align-items: center; gap: 5px; }
 .settings .suffix, .settings .prefix { color: var(--muted); font-size: 14px; }
 
+.subpanel {
+  border: 1px solid var(--line); border-radius: 9px;
+  padding: 10px 16px 4px; margin: 0 0 16px; background: var(--bg);
+}
+.subpanel legend { padding: 0 6px; }
+.toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+.toggle input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+.settings select {
+  padding: 8px 10px; border-radius: 7px; font-size: 14px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  font-family: inherit; max-width: 340px;
+}
+.settings input:disabled, .settings select:disabled, .settings textarea:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
+.settings textarea#setApifyInput { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+
 .settings-actions { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
 .save-msg { font-size: 13px; color: var(--muted); }
 .save-msg.ok { color: var(--accent); }

@@ -75,6 +75,32 @@ const DEFAULTS = {
     compCacheHours: 72,
   },
 
+  /**
+   * Optional: let Apify do the scraping instead of the built-in scraper.
+   * When enabled this takes over completely -- the direct scraper is skipped.
+   * Token also readable from the APIFY_TOKEN env var.
+   */
+  apify: {
+    enabled: false,
+    token: '',
+    actorId: 'scrapersdelight~auctionninja-scraper',
+    // 'last' reads the newest successful run (pair with a schedule inside
+    // Apify); 'run' triggers the Actor now and waits.
+    mode: 'last',
+    maxItems: 500,
+    // Override only for testing against a mock API.
+    apiBase: 'https://api.apify.com/v2',
+    /**
+     * Sent as the Actor's input in 'run' mode. Actors differ, so copy the
+     * exact input JSON from the Actor's page in Apify Console (the Input tab
+     * shows it) and paste it into Settings. This default follows the common
+     * startUrls convention but is not guaranteed to match your Actor.
+     */
+    input: {
+      startUrls: [{ url: 'https://www.auctionninja.com/ct/weston' }],
+    },
+  },
+
   http: {
     userAgent:
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
@@ -118,6 +144,14 @@ export function loadConfig() {
   // Env vars win over config.json so you can keep keys out of files entirely.
   if (process.env.EBAY_CLIENT_ID) cfg.ebay.clientId = process.env.EBAY_CLIENT_ID;
   if (process.env.EBAY_CLIENT_SECRET) cfg.ebay.clientSecret = process.env.EBAY_CLIENT_SECRET;
+  if (process.env.APIFY_TOKEN) {
+    cfg.apify.token = process.env.APIFY_TOKEN;
+    cfg.apify.enabled = true;
+  }
+  // Hosts (Render, Railway, Fly) assign the port and require binding all
+  // interfaces; locally we stay on loopback.
+  if (process.env.PORT) cfg.server.port = Number(process.env.PORT);
+  if (process.env.HOST) cfg.server.host = process.env.HOST;
   return cfg;
 }
 
@@ -152,6 +186,15 @@ export function saveSettings(patch) {
     // show a masked placeholder without wiping the stored key on every save.
     if (patch.ebay.clientId) next.ebay.clientId = patch.ebay.clientId.trim();
     if (patch.ebay.clientSecret) next.ebay.clientSecret = patch.ebay.clientSecret.trim();
+  }
+  if (patch.apify) {
+    next.apify = { ...existing.apify };
+    if (typeof patch.apify.enabled === 'boolean') next.apify.enabled = patch.apify.enabled;
+    if (patch.apify.actorId) next.apify.actorId = patch.apify.actorId.trim();
+    if (patch.apify.mode === 'run' || patch.apify.mode === 'last') next.apify.mode = patch.apify.mode;
+    if (patch.apify.input && typeof patch.apify.input === 'object') next.apify.input = patch.apify.input;
+    // Blank means "keep the stored token", same as the eBay fields.
+    if (patch.apify.token) next.apify.token = patch.apify.token.trim();
   }
   if (patch.economics) {
     next.economics = { ...existing.economics, ...numeric(patch.economics) };

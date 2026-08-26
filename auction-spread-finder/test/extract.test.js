@@ -150,6 +150,31 @@ test('embedded JSON picks up a per-lot buyers premium', () => {
   assert.equal(without.buyersPremiumPct, null);
 });
 
+test('Apify items normalize regardless of the Actor\'s field names', async () => {
+  const { normalizeItems } = await import('../src/sources/apify.js');
+
+  // Three plausible Actor output shapes: flat, snake_case, and lot-wrapped.
+  const items = [
+    { id: 'a1', title: 'Sterling Silver Tray', currentBid: 120, url: '/lot/a1' },
+    { lot_id: 'b2', lot_name: 'Persian Rug 8x10', current_bid: 340, permalink: '/lot/b2' },
+    { lot: { itemId: 'c3', itemTitle: 'Nikon FM2 Body', highBid: 210, href: '/lot/c3' } },
+    { scrapedAt: '2026-08-26', nothingUseful: true },
+  ];
+
+  const lots = normalizeItems(items);
+  assert.equal(lots.length, 3, 'the junk row should be dropped');
+  assert.deepEqual(lots.map((l) => l.currentBid).sort((a, b) => a - b), [120, 210, 340]);
+  assert.ok(lots.every((l) => l.extractedBy === 'apify'));
+  // Relative URLs resolve against AuctionNinja, not the Apify API.
+  assert.ok(lots.every((l) => !l.url || l.url.startsWith('https://www.auctionninja.com')));
+});
+
+test('normalizeItems tolerates a non-array response', async () => {
+  const { normalizeItems } = await import('../src/sources/apify.js');
+  assert.deepEqual(normalizeItems(null), []);
+  assert.deepEqual(normalizeItems({ error: 'nope' }), []);
+});
+
 test('parsePrice handles the formats these pages use', () => {
   assert.equal(parsePrice('$1,250.00'), 1250);
   assert.equal(parsePrice('Current Bid: $45.50 (12 bids)'), 45.5);

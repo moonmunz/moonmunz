@@ -49,6 +49,11 @@ export function startServer() {
           clientSecret: '',
           hasCredentials: Boolean(fresh.ebay.clientId && fresh.ebay.clientSecret),
         };
+        safe.apify = {
+          ...safe.apify,
+          token: '',
+          hasToken: Boolean(fresh.apify?.token),
+        };
         return json(res, 200, safe);
       }
 

@@ -40,6 +40,30 @@ async function loadConfig() {
   $('ebayState').className = has ? 'ok' : 'missing';
   $('setEbayId').placeholder = has ? '••••••  (saved — leave blank to keep)' : 'paste your App ID';
   $('setEbaySecret').placeholder = has ? '••••••  (saved — leave blank to keep)' : 'paste your Cert ID';
+
+  $('setApifyEnabled').checked = Boolean(cfg.apify.enabled);
+  $('setApifyActor').value = cfg.apify.actorId ?? '';
+  $('setApifyMode').value = cfg.apify.mode ?? 'last';
+  $('setApifyInput').value = JSON.stringify(cfg.apify.input ?? {}, null, 2);
+
+  const hasApify = cfg.apify.hasToken;
+  $('apifyState').textContent = hasApify ? '· saved' : '· not set';
+  $('apifyState').className = hasApify ? 'ok' : 'missing';
+  $('setApifyToken').placeholder = hasApify
+    ? '••••••  (saved — leave blank to keep)'
+    : 'paste your Apify token';
+
+  syncApifyFields();
+}
+
+/** Actor input only matters when we're triggering runs ourselves. */
+function syncApifyFields() {
+  const on = $('setApifyEnabled').checked;
+  const running = $('setApifyMode').value === 'run';
+  for (const id of ['setApifyToken', 'setApifyActor', 'setApifyMode', 'setApifyInput']) {
+    $(id).disabled = !on;
+  }
+  $('apifyInputField').style.opacity = on && running ? '1' : '0.45';
 }
 
 async function saveSettings() {
@@ -48,9 +72,28 @@ async function saveSettings() {
   $('saveMsg').textContent = 'Saving…';
   $('saveMsg').className = 'save-msg';
 
+  // Validate the Actor input before saving — a JSON typo here would otherwise
+  // only surface as a confusing Apify error on the next refresh.
+  let apifyInput;
+  try {
+    apifyInput = JSON.parse($('setApifyInput').value || '{}');
+  } catch (err) {
+    $('saveMsg').textContent = `Actor input isn't valid JSON: ${err.message}`;
+    $('saveMsg').className = 'save-msg bad';
+    btn.disabled = false;
+    return;
+  }
+
   const body = {
     sources: $('setSources').value.split('\n'),
     ebay: { clientId: $('setEbayId').value, clientSecret: $('setEbaySecret').value },
+    apify: {
+      enabled: $('setApifyEnabled').checked,
+      token: $('setApifyToken').value,
+      actorId: $('setApifyActor').value,
+      mode: $('setApifyMode').value,
+      input: apifyInput,
+    },
     economics: {
       buyersPremiumPct: Number($('setPremium').value) / 100,
       salesTaxPct: Number($('setTax').value) / 100,
@@ -66,9 +109,10 @@ async function saveSettings() {
     });
     if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`);
 
-    // Clear the secret field so it isn't left sitting on screen.
+    // Clear secret fields so they aren't left sitting on screen.
     $('setEbaySecret').value = '';
     $('setEbayId').value = '';
+    $('setApifyToken').value = '';
     await loadConfig();
 
     $('saveMsg').textContent = 'Saved. Hit Refresh to use the new settings.';
@@ -274,6 +318,8 @@ $('settingsBtn').addEventListener('click', () => {
 });
 $('closeSettings').addEventListener('click', () => { $('settings').hidden = true; });
 $('saveSettings').addEventListener('click', saveSettings);
+$('setApifyEnabled').addEventListener('change', syncApifyFields);
+$('setApifyMode').addEventListener('change', syncApifyFields);
 $('minSpread').addEventListener('change', load);
 $('minConfidence').addEventListener('input', (e) => {
   $('confVal').textContent = `${e.target.value}%`;

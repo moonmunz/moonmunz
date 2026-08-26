@@ -48,6 +48,53 @@
       </label>
     </div>
 
+    <fieldset class="subpanel">
+      <legend>
+        <label class="toggle">
+          <input type="checkbox" id="setApifyEnabled">
+          <span>Use Apify to fetch listings</span>
+        </label>
+      </legend>
+      <p class="field-help">
+        Recommended. Apify runs a maintained AuctionNinja scraper on their own
+        servers, so this app never has to read the site itself.
+      </p>
+
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">Apify API token <em id="apifyState"></em></span>
+          <span class="field-help">Apify Console → Settings → Integrations.</span>
+          <input type="password" id="setApifyToken" autocomplete="off">
+        </label>
+        <label class="field">
+          <span class="field-label">Actor</span>
+          <span class="field-help">Copy from the Actor's page URL.</span>
+          <input type="text" id="setApifyActor" spellcheck="false">
+        </label>
+      </div>
+
+      <label class="field">
+        <span class="field-label">When to fetch</span>
+        <span class="field-help">
+          "Read last run" is cheaper and faster — schedule the Actor inside Apify
+          and this just reads the results.
+        </span>
+        <select id="setApifyMode">
+          <option value="last">Read the last completed Apify run</option>
+          <option value="run">Run the Actor now, each time I refresh</option>
+        </select>
+      </label>
+
+      <label class="field" id="apifyInputField">
+        <span class="field-label">Actor input (JSON)</span>
+        <span class="field-help">
+          Only used when running the Actor. Copy this from the Actor's Input tab
+          in Apify Console so it matches exactly.
+        </span>
+        <textarea id="setApifyInput" rows="4" spellcheck="false"></textarea>
+      </label>
+    </fieldset>
+
     <div class="field-row">
       <label class="field narrow">
         <span class="field-label">Buyer's premium</span>

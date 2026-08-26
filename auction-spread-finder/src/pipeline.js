@@ -1,6 +1,7 @@
 import { loadConfig } from './config.js';
 import { Store } from './store.js';
 import { scrapeSource } from './sources/auctionninja.js';
+import { fetchFromApify } from './sources/apify.js';
 import { searchActive } from './comps/ebay.js';
 import { buildQuery, scoreConfidence } from './match.js';
 import { estimateMarketPrice, evaluateLot } from './economics.js';
@@ -28,7 +29,32 @@ export async function refresh({ onProgress = () => {} } = {}) {
 
   /* ---- 1. Scrape ---- */
   const scraped = [];
-  for (const source of cfg.sources.filter((s) => s.enabled !== false)) {
+
+  if (cfg.apify?.enabled) {
+    // Apify replaces the built-in scraper entirely -- running both would just
+    // produce duplicate lots and double the cost.
+    try {
+      const lots = await fetchFromApify(cfg, { onProgress });
+      if (lots.length === 0) {
+        summary.sourcesFailed++;
+        summary.errors.push(
+          cfg.apify.mode === 'last'
+            ? 'Apify returned no lots. Has the Actor run successfully yet? Run it once in Apify Console, then refresh here.'
+            : 'Apify ran but returned no recognizable lots. Check the Actor input in Settings against the Actor\'s own Input tab.'
+        );
+      } else {
+        summary.sourcesOk++;
+        summary.viaApify = true;
+        onProgress(`  got ${lots.length} lots from Apify`);
+        scraped.push(...lots);
+      }
+    } catch (err) {
+      summary.sourcesFailed++;
+      summary.errors.push(`Apify: ${err.message}`);
+    }
+  }
+
+  for (const source of cfg.apify?.enabled ? [] : cfg.sources.filter((s) => s.enabled !== false)) {
     onProgress(`Scraping ${source.url}`);
     const report = await scrapeSource(source);
 

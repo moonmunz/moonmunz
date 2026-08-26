@@ -159,7 +159,7 @@ function pick(obj, candidates) {
  * plausible price AND an id -- that trio is rare enough in nav/config objects
  * to keep false positives near zero.
  */
-function objectToLot(obj, baseUrl) {
+export function objectToLot(obj, baseUrl) {
   const title = pick(obj, TITLE_KEYS);
   if (typeof title !== 'string' || title.length < 4 || title.length > 300) return null;
 

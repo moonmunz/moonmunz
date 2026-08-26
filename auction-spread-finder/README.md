@@ -78,13 +78,48 @@ Settings defaults to 15%. AuctionNinja sellers set their own, commonly 15–18%,
 and it's the single biggest input to the spread — worth confirming against a
 sale you actually care about.
 
-### 4. Confirm the scraper works
+### 4. Turn on Apify (recommended)
+
+There are two ways this app can get listings. **Apify is the one to use** unless
+you want to avoid the cost.
+
+|  | Built-in scraper | Apify |
+|---|---|---|
+| Cost | free | Apify's pricing (free credit to start) |
+| Reads the site | this app does | Apify's servers do |
+| If AuctionNinja changes | may need a developer | their problem, not yours |
+| Verified against the live site | **no** | it's their product |
+
+The built-in scraper was written without ever loading AuctionNinja, so it may
+need a developer. Apify sells maintained scrapers for exactly this site — which
+also means the data is demonstrably extractable.
+
+To use it, tick **Use Apify to fetch listings** in Settings and fill in:
+
+- **API token** — Apify Console → Settings → Integrations
+- **Actor** — from the Actor's page URL, e.g. `scrapersdelight~auctionninja-scraper`
+- **When to fetch** — see below
+
+**"Read the last completed Apify run" is the setting you want.** Set up a
+schedule inside Apify (their Console → Schedules → run the Actor daily at, say,
+6am). Apify does the scraping overnight; this app just reads the results. It's
+cheaper, it's instant, and it avoids Apify's 300-second limit on live runs.
+
+The alternative, "Run the Actor now," triggers a scrape every time you press
+Refresh. Simpler to set up, but slower and it costs more. If a run exceeds 300
+seconds the app falls back to reading the last completed run, so you still get
+data.
+
+If you pick "Run the Actor now," copy the **Actor input** JSON from the Actor's
+own Input tab in Apify Console — every Actor takes different fields, and the
+default here is only a common convention, not a guarantee.
+
+### 5. Confirm it works
 
 Press **Refresh**. If lots appear, you're done.
 
-If you get a banner saying no lots could be extracted, the site's markup doesn't
-match what this expects. That needs a developer — see
-[Fixing the scraper](#fixing-the-scraper) below.
+If not, the banner says what failed. With Apify the usual cause is that the
+Actor hasn't run yet — run it once in Apify Console, then refresh here.
 
 ## Fixing the scraper
 
