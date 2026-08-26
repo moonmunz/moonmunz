@@ -5,6 +5,18 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
+ * Where settings saved from the UI are stored.
+ *
+ * On a host, the app directory is rebuilt on every deploy and restart, so a
+ * config.json written there would silently vanish -- you'd set your Actor,
+ * watch it work, and find it reverted days later. DATA_DIR points at the
+ * persistent disk, so settings live there when one exists.
+ */
+const CONFIG_FILE = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'config.json')
+  : path.join(ROOT, 'config.json');
+
+/**
  * Defaults are tuned for 06897 (Weston, CT). Everything here can be overridden
  * by config.json in the project root, which is gitignored so your keys and
  * your tuning stay local.
@@ -136,7 +148,7 @@ function deepMerge(base, override) {
 }
 
 export function loadConfig() {
-  const file = path.join(ROOT, 'config.json');
+  const file = CONFIG_FILE;
   let cfg = DEFAULTS;
   if (fs.existsSync(file)) {
     try {
@@ -168,7 +180,8 @@ export function loadConfig() {
  * written; anything else already in the file is preserved.
  */
 export function saveSettings(patch) {
-  const file = path.join(ROOT, 'config.json');
+  const file = CONFIG_FILE;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
 
   let existing = {};
   if (fs.existsSync(file)) {
