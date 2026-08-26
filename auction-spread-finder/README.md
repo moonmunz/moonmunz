@@ -87,6 +87,65 @@ confirming against a sale you actually care about.
 
 ---
 
+## Running it every day
+
+### Why this runs locally and not on Vercel/Netlify/Lambda
+
+Four reasons, the first of which is fatal:
+
+1. **Datacenter IPs get blocked.** Scrapers running from AWS/Vercel ranges are
+   flagged constantly; the same request from your laptop's residential IP looks
+   like a normal browser. This is exactly what blocked the sandbox this was
+   built in. You can't cheaply engineer around it — a VPS has the same problem.
+2. **Serverless has execution limits.** A refresh throttles requests at 1.5s and
+   can make up to 60 comp lookups. That's minutes, not the 10–60s a function
+   gets.
+3. **No persistent filesystem.** The store writes JSON to `data/`. Serverless
+   disks are ephemeral, so bid history and the comp cache would vanish between
+   invocations — you'd need to port the store to a hosted database first.
+4. **Playwright.** If AuctionNinja turns out to be client-rendered, you need a
+   headless browser, which is painful to fit inside a serverless bundle.
+
+Plus it's a single-user tool holding your eBay API keys. There's no upside to
+putting it on the public internet.
+
+### The setup that matches "open it each day"
+
+Leave the server running and refresh the data on a schedule. The server reads
+the store fresh on every request, so a background refresh shows up the next time
+you load the page — no restart needed.
+
+**macOS / Linux** — `crontab -e`, then (adjust the path):
+
+```cron
+# Refresh at 7am daily
+0 7 * * * cd /path/to/auction-spread-finder && /usr/bin/env node bin/cli.js refresh >> data/cron.log 2>&1
+```
+
+Keep the server up across reboots with [pm2](https://pm2.keymetrics.io/):
+
+```bash
+npm install -g pm2
+pm2 start "npm start" --name auctions
+pm2 save && pm2 startup     # run the command it prints
+```
+
+Then bookmark `http://localhost:4317` and open it with your coffee.
+
+**Windows** — Task Scheduler, daily trigger, action `node`, argument
+`bin/cli.js refresh`, "start in" set to the project folder.
+
+**Don't want a scheduler?** Just hit **Refresh** in the UI. It runs the same
+pipeline and shows progress. The scheduler only buys you fresh data at open.
+
+### Reaching it from your phone
+
+Don't port-forward it. Install [Tailscale](https://tailscale.com) on your laptop
+and phone — both land on the same private network and `http://<laptop>:4317`
+works from the couch, with the scraping still going out over your home IP.
+
+---
+
 ## Why the spread number is smaller than you'd expect
 
 A naive version of this tool would compute `ebay_price − current_bid ≥ 250` and
