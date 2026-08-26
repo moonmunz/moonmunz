@@ -14,9 +14,64 @@
     </div>
     <div class="actions">
       <span class="lastrun" id="lastRun"></span>
+      <button id="settingsBtn" class="btn">Settings</button>
       <button id="refreshBtn" class="btn primary">Refresh</button>
     </div>
   </header>
+
+  <section id="settings" class="settings" hidden>
+    <h2>Settings</h2>
+    <p class="settings-intro">
+      Everything the app needs. Changes save to this computer only.
+    </p>
+
+    <label class="field">
+      <span class="field-label">AuctionNinja pages to watch</span>
+      <span class="field-help">
+        Search AuctionNinja in your browser however you like, then copy the address
+        bar and paste it here. One per line.
+      </span>
+      <textarea id="setSources" rows="3" spellcheck="false"
+        placeholder="https://www.auctionninja.com/..."></textarea>
+    </label>
+
+    <div class="field-row">
+      <label class="field">
+        <span class="field-label">eBay App ID <em id="ebayState"></em></span>
+        <span class="field-help">Free from developer.ebay.com — needed to price items.</span>
+        <input type="text" id="setEbayId" spellcheck="false" autocomplete="off">
+      </label>
+      <label class="field">
+        <span class="field-label">eBay Cert ID (secret)</span>
+        <span class="field-help">Leave blank to keep what's already saved.</span>
+        <input type="password" id="setEbaySecret" autocomplete="off">
+      </label>
+    </div>
+
+    <div class="field-row">
+      <label class="field narrow">
+        <span class="field-label">Buyer's premium</span>
+        <span class="field-help">Check the sale — usually 15–18%.</span>
+        <div class="inline"><input type="number" id="setPremium" step="1" min="0" max="50"><span class="suffix">%</span></div>
+      </label>
+      <label class="field narrow">
+        <span class="field-label">Sales tax</span>
+        <span class="field-help">CT is 6.35%.</span>
+        <div class="inline"><input type="number" id="setTax" step="0.05" min="0" max="20"><span class="suffix">%</span></div>
+      </label>
+      <label class="field narrow">
+        <span class="field-label">Shipping per item</span>
+        <span class="field-help">What you expect to eat.</span>
+        <div class="inline"><span class="prefix">$</span><input type="number" id="setShip" step="1" min="0"></div>
+      </label>
+    </div>
+
+    <div class="settings-actions">
+      <button id="saveSettings" class="btn primary">Save settings</button>
+      <button id="closeSettings" class="btn">Close</button>
+      <span id="saveMsg" class="save-msg"></span>
+    </div>
+  </section>
 
   <div id="banner" class="banner" hidden></div>
 

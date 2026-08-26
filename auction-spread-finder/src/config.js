@@ -75,7 +75,14 @@ const DEFAULTS = {
     maxDetailFetches: 60, // cap per refresh so a run stays quick and polite
   },
 
-  server: { port: 4317 },
+  server: {
+    port: 4317,
+    // Bind to loopback only: this app holds your eBay API keys and exposes a
+    // settings endpoint, neither of which belong on a coffee-shop network.
+    // Set to '0.0.0.0' only if you want to reach it from another device
+    // (see the Tailscale note in the README).
+    host: '127.0.0.1',
+  },
 };
 
 function deepMerge(base, override) {
@@ -104,6 +111,60 @@ export function loadConfig() {
   if (process.env.EBAY_CLIENT_ID) cfg.ebay.clientId = process.env.EBAY_CLIENT_ID;
   if (process.env.EBAY_CLIENT_SECRET) cfg.ebay.clientSecret = process.env.EBAY_CLIENT_SECRET;
   return cfg;
+}
+
+/**
+ * Write user-editable settings back to config.json, so the Settings panel in
+ * the web UI can replace hand-editing JSON. Only the fields the UI exposes are
+ * written; anything else already in the file is preserved.
+ */
+export function saveSettings(patch) {
+  const file = path.join(ROOT, 'config.json');
+
+  let existing = {};
+  if (fs.existsSync(file)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+      // A corrupt file shouldn't block saving; we're about to rewrite it.
+    }
+  }
+
+  const next = { ...existing };
+
+  if (patch.sources) {
+    next.sources = patch.sources
+      .map((s) => (typeof s === 'string' ? s.trim() : ''))
+      .filter(Boolean)
+      .map((url, i) => ({ name: `source-${i + 1}`, url, enabled: true }));
+  }
+  if (patch.ebay) {
+    next.ebay = { ...existing.ebay };
+    // An empty string means "leave what's already saved alone", so the UI can
+    // show a masked placeholder without wiping the stored key on every save.
+    if (patch.ebay.clientId) next.ebay.clientId = patch.ebay.clientId.trim();
+    if (patch.ebay.clientSecret) next.ebay.clientSecret = patch.ebay.clientSecret.trim();
+  }
+  if (patch.economics) {
+    next.economics = { ...existing.economics, ...numeric(patch.economics) };
+  }
+  if (patch.filters) {
+    next.filters = { ...existing.filters, ...numeric(patch.filters) };
+  }
+
+  const tmp = `${file}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(next, null, 2));
+  fs.renameSync(tmp, file);
+  return next;
+}
+
+function numeric(obj) {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const n = Number(v);
+    if (Number.isFinite(n)) out[k] = n;
+  }
+  return out;
 }
 
 export { ROOT, DEFAULTS };

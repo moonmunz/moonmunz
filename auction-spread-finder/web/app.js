@@ -18,12 +18,72 @@ async function load() {
   renderResults(data.opportunities, data.stats);
 }
 
+let currentConfig = null;
+
 async function loadConfig() {
   const cfg = await (await fetch('/api/config')).json();
+  currentConfig = cfg;
+
   $('locationLabel').textContent = `${cfg.location.zip} · within ${cfg.location.radiusMiles} mi`;
   $('minSpread').value = cfg.filters.minSpreadDollars;
   $('minConfidence').value = Math.round(cfg.filters.minConfidence * 100);
   $('confVal').textContent = `${Math.round(cfg.filters.minConfidence * 100)}%`;
+
+  // Mirror config into the settings form.
+  $('setSources').value = cfg.sources.map((s) => s.url).join('\n');
+  $('setPremium').value = round(cfg.economics.buyersPremiumPct * 100, 2);
+  $('setTax').value = round(cfg.economics.salesTaxPct * 100, 2);
+  $('setShip').value = cfg.economics.assumedShippingCost;
+
+  const has = cfg.ebay.hasCredentials;
+  $('ebayState').textContent = has ? '· saved' : '· not set';
+  $('ebayState').className = has ? 'ok' : 'missing';
+  $('setEbayId').placeholder = has ? '••••••  (saved — leave blank to keep)' : 'paste your App ID';
+  $('setEbaySecret').placeholder = has ? '••••••  (saved — leave blank to keep)' : 'paste your Cert ID';
+}
+
+async function saveSettings() {
+  const btn = $('saveSettings');
+  btn.disabled = true;
+  $('saveMsg').textContent = 'Saving…';
+  $('saveMsg').className = 'save-msg';
+
+  const body = {
+    sources: $('setSources').value.split('\n'),
+    ebay: { clientId: $('setEbayId').value, clientSecret: $('setEbaySecret').value },
+    economics: {
+      buyersPremiumPct: Number($('setPremium').value) / 100,
+      salesTaxPct: Number($('setTax').value) / 100,
+      assumedShippingCost: Number($('setShip').value),
+    },
+  };
+
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`);
+
+    // Clear the secret field so it isn't left sitting on screen.
+    $('setEbaySecret').value = '';
+    $('setEbayId').value = '';
+    await loadConfig();
+
+    $('saveMsg').textContent = 'Saved. Hit Refresh to use the new settings.';
+    $('saveMsg').className = 'save-msg ok';
+  } catch (err) {
+    $('saveMsg').textContent = `Could not save: ${err.message}`;
+    $('saveMsg').className = 'save-msg bad';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function round(n, places) {
+  const f = 10 ** places;
+  return Math.round(n * f) / f;
 }
 
 function renderStats(stats) {
@@ -110,6 +170,14 @@ function renderLot(lot) {
         <span>searched: “${escapeHtml(lot.query ?? '')}”</span>
       </div>
 
+      ${lot.url ? `<a class="bid-link" href="${escapeHtml(lot.url)}" target="_blank" rel="noopener">
+        Open on AuctionNinja
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor"
+             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4.5 1.5h6v6M10.5 1.5L5 7M8 9.5v1h-6.5v-9h1"/>
+        </svg>
+      </a>` : ''}
+
       <div class="math">
         <div><span class="k">Current bid</span><span class="v">${money2(v.currentBid)}</span></div>
         <div><span class="k">+ premium/tax</span><span class="v">${money2(v.buyCost.total)}</span></div>
@@ -190,6 +258,13 @@ function escapeHtml(s) {
 
 /* ---- wire up ---- */
 $('refreshBtn').addEventListener('click', startRefresh);
+$('settingsBtn').addEventListener('click', () => {
+  const panel = $('settings');
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+$('closeSettings').addEventListener('click', () => { $('settings').hidden = true; });
+$('saveSettings').addEventListener('click', saveSettings);
 $('minSpread').addEventListener('change', load);
 $('minConfidence').addEventListener('input', (e) => {
   $('confVal').textContent = `${e.target.value}%`;

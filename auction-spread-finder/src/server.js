@@ -1,7 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, loadConfig } from './config.js';
+import { ROOT, loadConfig, saveSettings } from './config.js';
 import { getOpportunities, refresh } from './pipeline.js';
 
 const WEB_DIR = path.join(ROOT, 'web');
@@ -39,14 +39,23 @@ export function startServer() {
       }
 
       if (url.pathname === '/api/config') {
-        // Never ship secrets to the browser.
-        const safe = structuredClone(cfg);
+        // Re-read from disk so a settings save takes effect without a restart.
+        const fresh = loadConfig();
+        // Never ship secrets to the browser -- only whether they're present.
+        const safe = structuredClone(fresh);
         safe.ebay = {
           ...safe.ebay,
-          clientId: safe.ebay.clientId ? '(set)' : '',
-          clientSecret: safe.ebay.clientSecret ? '(set)' : '',
+          clientId: '',
+          clientSecret: '',
+          hasCredentials: Boolean(fresh.ebay.clientId && fresh.ebay.clientSecret),
         };
         return json(res, 200, safe);
+      }
+
+      if (url.pathname === '/api/settings' && req.method === 'POST') {
+        const body = await readBody(req);
+        saveSettings(body);
+        return json(res, 200, { saved: true });
       }
 
       return serveStatic(url.pathname, res);
@@ -55,10 +64,35 @@ export function startServer() {
     }
   });
 
-  server.listen(cfg.server.port, () => {
-    console.log(`\n  Auction spread finder running:  http://localhost:${cfg.server.port}\n`);
+  const host = cfg.server.host ?? '127.0.0.1';
+  server.listen(cfg.server.port, host, () => {
+    console.log(`\n  Auction spread finder is running.`);
+    console.log(`  Open this in your browser:  http://localhost:${cfg.server.port}`);
+    console.log(`\n  Leave this window open while you use it. Press Ctrl+C to stop.\n`);
   });
   return server;
+}
+
+/** Read and parse a JSON request body, with a size cap. */
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+      if (data.length > 1_000_000) {
+        reject(new Error('Request body too large'));
+        req.destroy();
+      }
+    });
+    req.on('end', () => {
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch (err) {
+        reject(new Error(`Invalid JSON in request body: ${err.message}`));
+      }
+    });
+    req.on('error', reject);
+  });
 }
 
 function serveStatic(pathname, res) {

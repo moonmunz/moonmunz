@@ -67,6 +67,51 @@ body {
 }
 .banner code { background: rgba(128,128,128,0.2); padding: 1px 5px; border-radius: 4px; }
 
+/* ---- settings panel ---- */
+.settings {
+  padding: 20px 24px 22px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.settings h2 { margin: 0 0 4px; font-size: 16px; }
+.settings-intro { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; flex: 1; }
+.field-label { font-size: 13px; font-weight: 600; }
+.field-label em { font-style: normal; font-weight: 500; font-size: 12px; }
+.field-label .ok { color: var(--accent); }
+.field-label .missing { color: var(--warn); }
+.field-help { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.field-row { display: flex; gap: 18px; flex-wrap: wrap; }
+.field.narrow { flex: 0 1 190px; }
+
+.settings textarea,
+.settings input[type="text"],
+.settings input[type="password"],
+.settings input[type="number"] {
+  padding: 8px 10px; border-radius: 7px; font-size: 14px; width: 100%;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  font-family: inherit;
+}
+.settings textarea { resize: vertical; font-size: 13px; }
+.settings .inline { display: flex; align-items: center; gap: 5px; }
+.settings .suffix, .settings .prefix { color: var(--muted); font-size: 14px; }
+
+.settings-actions { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.save-msg { font-size: 13px; color: var(--muted); }
+.save-msg.ok { color: var(--accent); }
+.save-msg.bad { color: var(--danger); }
+
+/* ---- open-listing link ---- */
+.bid-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-bottom: 10px; padding: 5px 11px; border-radius: 7px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  color: var(--link); text-decoration: none; font-size: 13px; font-weight: 500;
+}
+.bid-link:hover { border-color: var(--link); }
+.bid-link svg { opacity: 0.75; }
+
 /* ---- controls ---- */
 .controls {
   display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap;

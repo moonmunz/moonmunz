@@ -1,15 +1,34 @@
 # Auction Spread Finder
 
-A local web app you open each morning. It scrapes recent AuctionNinja lots near
-06897, prices each one against eBay comps, and shows you the ones where the
-**net** spread clears $250.
+A web app on your own computer that you open each morning. It scrapes recent
+AuctionNinja lots near 06897, prices each one against eBay comps, and shows you
+the ones where the **net** spread clears $250.
+
+## Starting it (no terminal needed)
+
+**Mac:** double-click **`Start on Mac.command`**
+**Windows:** double-click **`Start on Windows.bat`**
+
+Your browser opens to the app. Leave the little black window open while you use
+it; closing it stops the app. That's the whole daily routine — double-click,
+then hit **Refresh**.
+
+The first launch takes about a minute (it's installing itself) and will tell you
+if you need [Node.js](https://nodejs.org) first — that's a one-time download,
+big green LTS button, standard installer.
+
+<details>
+<summary>Terminal commands, if you prefer them</summary>
 
 ```
 npm install
+npm start          # http://localhost:4317
+npm run refresh    # scrape + price without opening the app
 npm run doctor     # check what's working
-npm run refresh    # scrape + price
-npm start          # open http://localhost:4317
+npm run probe      # diagnose the scraper
+npm test           # 19 unit tests
 ```
+</details>
 
 ---
 
@@ -31,59 +50,71 @@ So expect step 1 below to need five minutes of your attention, once.
 
 ## Setup
 
+All of this lives in the **Settings** button at the top of the app — no files to
+edit.
+
 ### 1. Point it at the right AuctionNinja pages
 
 Their browse URLs aren't documented and I couldn't observe them, so rather than
-guessing a scheme, the app crawls **URLs you paste from your browser**. Search
-AuctionNinja however you like — by your zip, by radius, by category — and copy
-the resulting URL.
+guessing a scheme, the app watches **URLs you paste from your browser**. Search
+AuctionNinja however you like — by your zip, by radius, by category — copy the
+address bar, and paste it into Settings. One per line.
 
-```bash
-cp config.example.json config.json
-```
+### 2. Add eBay API keys
 
-Put your URLs in `sources`, then check that extraction works:
+The app needs these to look up prices. They're free but the signup is a
+developer portal, so it's the fiddliest ten minutes of the setup:
+
+1. Sign up at [developer.ebay.com](https://developer.ebay.com)
+2. Create an app, then open the **Production** keyset
+3. Copy the **App ID** and **Cert ID** into Settings
+
+Without them everything still runs — you just get lots with no pricing, and a
+banner saying why.
+
+### 3. Check the buyer's premium
+
+Settings defaults to 15%. AuctionNinja sellers set their own, commonly 15–18%,
+and it's the single biggest input to the spread — worth confirming against a
+sale you actually care about.
+
+### 4. Confirm the scraper works
+
+Press **Refresh**. If lots appear, you're done.
+
+If you get a banner saying no lots could be extracted, the site's markup doesn't
+match what this expects. That needs a developer — see
+[Fixing the scraper](#fixing-the-scraper) below.
+
+## Fixing the scraper
+
+This is the one part that may need a developer, so it's worth knowing why.
+
+This app was built in a sandbox that couldn't reach auctionninja.com, so its
+markup was never observed directly. The extractor is written to *discover*
+structure rather than assume it — the main strategy walks whatever JSON the page
+embeds and matches objects by shape (something with a title, a price, and an id)
+instead of by field name, so it survives most front-end changes. But if all four
+strategies miss, someone has to look.
 
 ```bash
 npm run probe
 ```
 
-`probe` fetches each page, tries every extraction strategy, and tells you which
-one worked. If none did, it saves the raw HTML and prints the page's actual
-class names, script-tag counts, and whether prices appear in the HTML at all —
-which is exactly what you need to either fix a selector or conclude the page is
-client-rendered.
+`probe` fetches each page, tries every strategy, and reports which fired. If
+none did, it saves the raw HTML and prints the page's actual class names,
+script-tag counts, and whether prices appear in the HTML at all. That's enough
+for a developer to either fix a selector in `src/sources/auctionninja.js` (the
+only place selectors live) or conclude the page is client-rendered.
 
-If it says the page renders client-side:
+If it reports client-side rendering:
 
 ```bash
 npm install playwright && npx playwright install chromium
 ```
 
-The scraper then falls back to a real browser automatically. (Playwright is
-deliberately *not* a default dependency — it pulls ~300MB.)
-
-### 2. Add eBay API keys
-
-Comps need them. They're free:
-
-1. Sign up at [developer.ebay.com](https://developer.ebay.com)
-2. Create an app, take the **Production** keyset
-3. Either put them in `config.json` under `ebay`, or:
-
-```bash
-export EBAY_CLIENT_ID=...
-export EBAY_CLIENT_SECRET=...
-```
-
-Without keys everything still runs — you just get lots with no pricing, and a
-banner telling you why.
-
-### 3. Check the buyer's premium
-
-`economics.buyersPremiumPct` defaults to 15%. AuctionNinja sellers set their own,
-commonly 15–18%. It's the single biggest input to the spread, so it's worth
-confirming against a sale you actually care about.
+The scraper then falls back to a real browser automatically. Playwright is
+deliberately *not* a default dependency — it pulls ~300MB.
 
 ---
 
