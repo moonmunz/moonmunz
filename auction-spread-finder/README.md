@@ -60,17 +60,34 @@ guessing a scheme, the app watches **URLs you paste from your browser**. Search
 AuctionNinja however you like — by your zip, by radius, by category — copy the
 address bar, and paste it into Settings. One per line.
 
-### 2. Add eBay API keys
+### 2. Choose where price comparisons come from
 
-The app needs these to look up prices. They're free but the signup is a
-developer portal, so it's the fiddliest ten minutes of the setup:
+Settings → **Where price comparisons come from**. Two options:
 
-1. Sign up at [developer.ebay.com](https://developer.ebay.com)
-2. Create an app, then open the **Production** keyset
-3. Copy the **App ID** and **Cert ID** into Settings
+**eBay's official API.** Free, but eBay issues Production keys only after
+manually reviewing your developer account, which can take days. Sign up at
+[developer.ebay.com](https://developer.ebay.com), create an app, open the
+**Production** keyset, and copy the **App ID** and **Cert ID** into Settings.
+Note that eBay also requires you to subscribe to or opt out of marketplace
+account-deletion notifications before Production keys work at all.
 
-Without them everything still runs — you just get lots with no pricing, and a
-banner saying why.
+Worth knowing: this API returns **active listings** — asking prices, not sales.
+The app discounts them by `askToSaleRatio` (0.75) to approximate what things
+actually fetch.
+
+**An eBay scraper on Apify.** No eBay approval needed, so it works immediately.
+Pick an eBay Actor from the Apify Store, paste its ID into Settings, and copy
+its input shape from the Actor's Input tab — `{{query}}` gets replaced with each
+item's search term.
+
+If the Actor returns **sold** listings, tick **Sold data**. That matters: sold
+prices are already realized, so the app skips the ask-to-sale discount instead
+of applying it twice and understating every spread. Sold comps are also
+strictly better data than asks — it's what eBay's own restricted Marketplace
+Insights API exists to provide.
+
+Without either configured, everything still runs — you get lots with no pricing
+and a banner explaining what's missing.
 
 ### 3. Check the buyer's premium
 

@@ -88,6 +88,35 @@ const DEFAULTS = {
   },
 
   /**
+   * Where eBay comps come from.
+   *   'ebay-api' -- eBay's official Browse API. Needs Production keys, which
+   *                 eBay issues only after manually reviewing your developer
+   *                 account (can take days).
+   *   'apify'    -- an eBay scraper Actor on Apify. No eBay approval needed,
+   *                 and if the Actor scrapes SOLD listings you get real
+   *                 realized prices rather than asking prices.
+   */
+  comps: {
+    source: 'ebay-api',
+    apify: {
+      actorId: '',
+      // Blank falls back to the main Apify token.
+      token: '',
+      maxItems: 50,
+      /**
+       * Sent as the Actor's input. {{query}} is replaced with the search term,
+       * anywhere it appears. Copy the real shape from the Actor's Input tab.
+       */
+      inputTemplate: { searchTerms: ['{{query}}'] },
+      /**
+       * Set true if your Actor returns SOLD listings. Sold prices are already
+       * realized, so they skip the ask-to-sale discount.
+       */
+      isSoldData: false,
+    },
+  },
+
+  /**
    * Optional: let Apify do the scraping instead of the built-in scraper.
    * When enabled this takes over completely -- the direct scraper is skipped.
    * Token also readable from the APIFY_TOKEN env var.
@@ -206,6 +235,24 @@ export function saveSettings(patch) {
     // show a masked placeholder without wiping the stored key on every save.
     if (patch.ebay.clientId) next.ebay.clientId = patch.ebay.clientId.trim();
     if (patch.ebay.clientSecret) next.ebay.clientSecret = patch.ebay.clientSecret.trim();
+  }
+  if (patch.comps) {
+    next.comps = { ...existing.comps };
+    if (patch.comps.source === 'apify' || patch.comps.source === 'ebay-api') {
+      next.comps.source = patch.comps.source;
+    }
+    if (patch.comps.apify) {
+      next.comps.apify = { ...existing.comps?.apify };
+      if (patch.comps.apify.actorId !== undefined) {
+        next.comps.apify.actorId = String(patch.comps.apify.actorId).trim();
+      }
+      if (typeof patch.comps.apify.isSoldData === 'boolean') {
+        next.comps.apify.isSoldData = patch.comps.apify.isSoldData;
+      }
+      if (patch.comps.apify.inputTemplate && typeof patch.comps.apify.inputTemplate === 'object') {
+        next.comps.apify.inputTemplate = patch.comps.apify.inputTemplate;
+      }
+    }
   }
   if (patch.apify) {
     next.apify = { ...existing.apify };

@@ -63,7 +63,20 @@ async function loadConfig() {
     ? '••••••  (saved — leave blank to keep)'
     : 'paste your Apify token';
 
+  $('setCompSource').value = cfg.comps?.source ?? 'ebay-api';
+  $('setCompActor').value = cfg.comps?.apify?.actorId ?? '';
+  $('setCompSold').checked = Boolean(cfg.comps?.apify?.isSoldData);
+  $('setCompInput').value = JSON.stringify(cfg.comps?.apify?.inputTemplate ?? {}, null, 2);
+
   syncApifyFields();
+  syncCompFields();
+}
+
+/** Show only the credential fields the chosen comp source actually needs. */
+function syncCompFields() {
+  const useApify = $('setCompSource').value === 'apify';
+  $('compApifyPanel').hidden = !useApify;
+  $('ebayKeysRow').hidden = useApify;
 }
 
 /** Actor input only matters when we're triggering runs ourselves. */
@@ -94,7 +107,25 @@ async function saveSettings() {
     return;
   }
 
+  let compInput;
+  try {
+    compInput = JSON.parse($('setCompInput').value || '{}');
+  } catch (err) {
+    $('saveMsg').textContent = `Comp Actor input isn't valid JSON: ${err.message}`;
+    $('saveMsg').className = 'save-msg bad';
+    btn.disabled = false;
+    return;
+  }
+
   const body = {
+    comps: {
+      source: $('setCompSource').value,
+      apify: {
+        actorId: $('setCompActor').value,
+        isSoldData: $('setCompSold').checked,
+        inputTemplate: compInput,
+      },
+    },
     sources: $('setSources').value.split('\n'),
     ebay: { clientId: $('setEbayId').value, clientSecret: $('setEbaySecret').value },
     apify: {
@@ -330,6 +361,7 @@ $('closeSettings').addEventListener('click', () => { $('settings').hidden = true
 $('saveSettings').addEventListener('click', saveSettings);
 $('setApifyEnabled').addEventListener('change', syncApifyFields);
 $('setApifyMode').addEventListener('change', syncApifyFields);
+$('setCompSource').addEventListener('change', syncCompFields);
 $('minSpread').addEventListener('change', load);
 $('minConfidence').addEventListener('input', (e) => {
   $('confVal').textContent = `${e.target.value}%`;

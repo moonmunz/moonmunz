@@ -35,7 +35,39 @@
         placeholder="https://www.auctionninja.com/..."></textarea>
     </label>
 
-    <div class="field-row">
+    <label class="field">
+      <span class="field-label">Where price comparisons come from</span>
+      <span class="field-help">
+        eBay's own API needs a developer account they approve by hand. Apify works immediately.
+      </span>
+      <select id="setCompSource">
+        <option value="ebay-api">eBay API (needs approved developer keys)</option>
+        <option value="apify">Apify eBay scraper (no eBay approval needed)</option>
+      </select>
+    </label>
+
+    <fieldset class="subpanel" id="compApifyPanel">
+      <legend><span class="legend-text">Apify comp settings</span></legend>
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">eBay Actor</span>
+          <span class="field-help">From the Apify Store — search "eBay".</span>
+          <input type="text" id="setCompActor" spellcheck="false" placeholder="username~ebay-scraper">
+        </label>
+        <label class="field narrow">
+          <span class="field-label">Sold listings?</span>
+          <span class="field-help">Tick if the Actor returns sold prices.</span>
+          <label class="toggle"><input type="checkbox" id="setCompSold"><span>Sold data</span></label>
+        </label>
+      </div>
+      <label class="field">
+        <span class="field-label">Actor input (JSON)</span>
+        <span class="field-help"><code>{{query}}</code> is replaced with each item's search term.</span>
+        <textarea id="setCompInput" rows="3" spellcheck="false"></textarea>
+      </label>
+    </fieldset>
+
+    <div class="field-row" id="ebayKeysRow">
       <label class="field">
         <span class="field-label">eBay App ID <em id="ebayState"></em></span>
         <span class="field-help">Free from developer.ebay.com — needed to price items.</span>

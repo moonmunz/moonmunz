@@ -3,6 +3,7 @@ import { Store } from './store.js';
 import { scrapeSource } from './sources/auctionninja.js';
 import { fetchFromApify } from './sources/apify.js';
 import { searchActive } from './comps/ebay.js';
+import { searchCompsViaApify } from './comps/apify-ebay.js';
 import { buildQuery, scoreConfidence } from './match.js';
 import { estimateMarketPrice, evaluateLot } from './economics.js';
 
@@ -109,11 +110,13 @@ export async function refresh({ onProgress = () => {} } = {}) {
       if (credsMissing) continue;
       try {
         onProgress(`Comping "${queryInfo.query}"`);
-        comps = await searchActive(queryInfo.query, cfg);
+        comps = cfg.comps?.source === 'apify'
+          ? await searchCompsViaApify(queryInfo.query, cfg)
+          : await searchActive(queryInfo.query, cfg);
         store.putComps(cacheKey, comps);
         summary.compLookups++;
       } catch (err) {
-        if (err.code === 'NO_EBAY_CREDS') {
+        if (err.code === 'NO_EBAY_CREDS' || err.code === 'NO_APIFY_COMP_ACTOR' || err.code === 'NO_APIFY_TOKEN') {
           credsMissing = true;
           summary.warnings.push(err.message);
           continue;
@@ -125,9 +128,15 @@ export async function refresh({ onProgress = () => {} } = {}) {
 
     // A premium scraped from the listing beats the configured default, which
     // is only a guess at what this particular seller charges.
-    const econ = lot.buyersPremiumPct != null
+    let econ = lot.buyersPremiumPct != null
       ? { ...cfg.economics, buyersPremiumPct: lot.buyersPremiumPct }
       : cfg.economics;
+
+    // Sold comps are realized prices, so they must not be discounted again by
+    // the ask-to-sale ratio -- that would understate every spread.
+    if (cfg.comps?.source === 'apify' && cfg.comps.apify?.isSoldData) {
+      econ = { ...econ, askToSaleRatio: 1.0 };
+    }
 
     const confidence = scoreConfidence(lot, queryInfo, comps);
     const market = estimateMarketPrice(comps, econ);
