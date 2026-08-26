@@ -119,6 +119,11 @@ export function startServer() {
     process.exit(1);
   }
 
+  // Logged so a missing or misplaced asset is visible in a host's log rather
+  // than only as a silently unstyled page.
+  const webFiles = fs.existsSync(WEB_DIR) ? fs.readdirSync(WEB_DIR) : [];
+  console.log(`  Serving from ${WEB_DIR}: ${webFiles.join(', ') || 'EMPTY — assets are missing'}`);
+
   server.listen(cfg.server.port, host, () => {
     console.log(`\n  Auction spread finder is running.`);
     console.log(`  Open this in your browser:  http://localhost:${cfg.server.port}`);
@@ -192,9 +197,30 @@ function serveStatic(pathname, res) {
   const file = path.join(WEB_DIR, rel);
   // Prevent path traversal out of web/.
   if (!file.startsWith(WEB_DIR) || !fs.existsSync(file)) {
+    console.warn(`[static] 404 for ${pathname} (looked in ${file})`);
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     return res.end('Not found');
   }
+
+  // The stylesheet is inlined into the page rather than linked. A separate
+  // request for it failed on one host in a way that could not be reproduced
+  // locally, and an unstyled page is a bad enough failure -- the app is still
+  // usable but looks broken -- that removing the request entirely is worth
+  // more than the caching it costs. The file stays separate on disk.
+  if (rel === 'index.html') {
+    let html = fs.readFileSync(file, 'utf8');
+    const cssPath = path.join(WEB_DIR, 'styles.css');
+    if (fs.existsSync(cssPath)) {
+      const css = fs.readFileSync(cssPath, 'utf8');
+      html = html.replace(
+        /<link rel="stylesheet" href="\/styles\.css">/,
+        `<style>\n${css}\n</style>`
+      );
+    }
+    res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache' });
+    return res.end(html);
+  }
+
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] ?? 'application/octet-stream' });
   fs.createReadStream(file).pipe(res);
 }
