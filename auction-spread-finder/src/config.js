@@ -16,17 +16,25 @@ const DEFAULTS = {
   },
 
   /**
-   * AuctionNinja does not publish an API, and their browse URLs change. Rather
-   * than guessing a URL scheme, paste the URLs straight out of your browser
-   * after you've searched/filtered the way you like. Each one is crawled on
-   * every refresh.
+   * AuctionNinja browses by town: auctionninja.com/<state>/<town-slug>.
+   * These are the towns closest to 06897 (Weston). Add or remove any in the
+   * Settings panel -- or paste URLs straight out of your browser after
+   * searching their site however you like. Every enabled URL is crawled on
+   * each refresh, throttled to one request per 1.5s.
    *
-   * These defaults are a starting guess -- run `npm run probe` to see whether
-   * they actually return listings, and replace them with real URLs from your
-   * browser if they don't.
+   * Note: these pages were never loaded during development (the build sandbox
+   * had no access to the site), so if a URL 404s, replace it with one from
+   * your browser's address bar.
    */
   sources: [
-    { name: 'auctionninja-local', url: 'https://www.auctionninja.com/sales', enabled: true },
+    { name: 'weston', url: 'https://www.auctionninja.com/ct/weston', enabled: true },
+    { name: 'westport', url: 'https://www.auctionninja.com/ct/westport', enabled: true },
+    { name: 'wilton', url: 'https://www.auctionninja.com/ct/wilton', enabled: true },
+    { name: 'redding', url: 'https://www.auctionninja.com/ct/redding', enabled: true },
+    { name: 'ridgefield', url: 'https://www.auctionninja.com/ct/ridgefield', enabled: true },
+    { name: 'new-canaan', url: 'https://www.auctionninja.com/ct/new-canaan', enabled: true },
+    { name: 'norwalk', url: 'https://www.auctionninja.com/ct/norwalk', enabled: true },
+    { name: 'fairfield', url: 'https://www.auctionninja.com/ct/fairfield', enabled: true },
   ],
 
   economics: {

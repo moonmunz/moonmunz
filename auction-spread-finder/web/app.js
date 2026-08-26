@@ -180,7 +180,10 @@ function renderLot(lot) {
 
       <div class="math">
         <div><span class="k">Current bid</span><span class="v">${money2(v.currentBid)}</span></div>
-        <div><span class="k">+ premium/tax</span><span class="v">${money2(v.buyCost.total)}</span></div>
+        <div>
+          <span class="k">+ premium/tax${v.premiumSource === 'listing' ? '' : ' *'}</span>
+          <span class="v">${money2(v.buyCost.total)}</span>
+        </div>
         <div><span class="k">eBay median ask</span><span class="v">${money2(v.market.askMedian)}</span></div>
         <div><span class="k">Est. sale price</span><span class="v">${money2(v.market.estimatedSalePrice)}</span></div>
         <div><span class="k">− eBay fees/ship</span><span class="v">${money2(v.sell.net)}</span></div>
@@ -190,7 +193,13 @@ function renderLot(lot) {
       <details class="comps">
         <summary>${lot.comps?.length ?? 0} eBay comps · why ${conf}% confidence</summary>
         <ul class="comp-list">${comps}</ul>
-        <div class="reasons">${(c.reasons ?? []).map(escapeHtml).join(' · ')}</div>
+        <div class="reasons">
+          ${(c.reasons ?? []).map(escapeHtml).join(' · ')}
+          <br>
+          ${v.premiumSource === 'listing'
+            ? `buyer's premium read from the listing`
+            : `* buyer's premium not found on the listing — using your Settings default, so verify it before bidding`}
+        </div>
       </details>
     </div>
 

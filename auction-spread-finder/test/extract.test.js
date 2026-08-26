@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  fromEmbeddedJson, fromJsonLd, fromDomSelectors, parsePrice,
+  fromEmbeddedJson, fromJsonLd, fromDomSelectors, parsePrice, parsePercent,
 } from '../src/sources/auctionninja.js';
 
 const BASE = 'https://www.auctionninja.com/sales';
@@ -117,6 +117,37 @@ test('DOM selectors: refuses to latch onto a single stray match', () => {
     <div class="title">Only One Thing</div><div class="bid">$10</div>
   </div></html>`;
   assert.equal(fromDomSelectors(html, BASE).length, 0);
+});
+
+test('parsePercent normalizes both ways of writing a rate', () => {
+  assert.equal(parsePercent(18), 0.18);      // "18" meaning 18%
+  assert.equal(parsePercent(0.18), 0.18);    // already fractional
+  assert.equal(parsePercent('18%'), 0.18);
+  assert.equal(parsePercent('Buyer\'s Premium: 15%'), 0.15);
+  assert.equal(parsePercent(15), 0.15);
+});
+
+test('parsePercent rejects implausible rates rather than wrecking the math', () => {
+  assert.equal(parsePercent(85), null);      // not a buyer's premium
+  assert.equal(parsePercent(0), null);
+  assert.equal(parsePercent(-5), null);
+  assert.equal(parsePercent('n/a'), null);
+  assert.equal(parsePercent(null), null);
+});
+
+test('embedded JSON picks up a per-lot buyers premium', () => {
+  const html = `<html><script type="application/json">${JSON.stringify({
+    items: [
+      { id: 1, title: 'Sterling Bowl', currentBid: 100, buyersPremium: 18 },
+      { id: 2, title: 'Brass Lamp', currentBid: 40 },
+    ],
+  })}</script></html>`;
+
+  const lots = fromEmbeddedJson(html, BASE);
+  const withBp = lots.find((l) => l.sourceId === '1');
+  const without = lots.find((l) => l.sourceId === '2');
+  assert.equal(withBp.buyersPremiumPct, 0.18);
+  assert.equal(without.buyersPremiumPct, null);
 });
 
 test('parsePrice handles the formats these pages use', () => {

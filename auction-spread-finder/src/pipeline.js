@@ -97,9 +97,16 @@ export async function refresh({ onProgress = () => {} } = {}) {
       }
     }
 
+    // A premium scraped from the listing beats the configured default, which
+    // is only a guess at what this particular seller charges.
+    const econ = lot.buyersPremiumPct != null
+      ? { ...cfg.economics, buyersPremiumPct: lot.buyersPremiumPct }
+      : cfg.economics;
+
     const confidence = scoreConfidence(lot, queryInfo, comps);
-    const market = estimateMarketPrice(comps, cfg.economics);
-    const valuation = evaluateLot(lot, market, cfg.economics, cfg.filters);
+    const market = estimateMarketPrice(comps, econ);
+    const valuation = evaluateLot(lot, market, econ, cfg.filters);
+    if (valuation) valuation.premiumSource = lot.buyersPremiumPct != null ? 'listing' : 'config';
 
     store.upsertLot({
       ...lot,

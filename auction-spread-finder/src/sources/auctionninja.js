@@ -134,6 +134,13 @@ const ID_KEYS = ['id', 'lotid', 'itemid', 'itemnumber', 'lotnumber', 'auctionite
 const URL_KEYS = ['url', 'link', 'href', 'permalink', 'itemurl', 'loturl', 'slug'];
 const IMAGE_KEYS = ['image', 'imageurl', 'thumbnail', 'thumb', 'photo', 'imagesrc', 'primaryimage', 'images'];
 const END_KEYS = ['endtime', 'enddate', 'endsat', 'closingtime', 'closedate', 'endtimeutc', 'auctionendtime'];
+// Buyer's premium is set per seller and is the biggest single input to the
+// spread, so prefer the page's own value over the configured default.
+// Deliberately no bare 'premium' -- too generic, it would match unrelated fields.
+const BP_KEYS = [
+  'buyerspremium', 'buyerpremium', 'buyerspremiumpercent', 'buyerpremiumpercent',
+  'buyerspremiumrate', 'bppercent', 'buyerspremiumpct',
+];
 const LOCATION_KEYS = ['city', 'location', 'zip', 'zipcode', 'postalcode', 'state', 'address'];
 
 function norm(key) {
@@ -175,6 +182,7 @@ function objectToLot(obj, baseUrl) {
     image,
     endsAt: parseDate(pick(obj, END_KEYS)),
     location: extractLocation(obj),
+    buyersPremiumPct: parsePercent(pick(obj, BP_KEYS)),
     extractedBy: 'embedded-json',
   };
 }
@@ -331,6 +339,24 @@ export function parsePrice(value) {
   if (!m) return null;
   const n = parseFloat(m[1]);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Normalize a percentage to a fraction. Sites express these both ways --
+ * 18 meaning 18%, or 0.18 meaning the same thing. Values at or below 1 are
+ * treated as already-fractional; anything above as a percent. Rejects
+ * implausible rates so a stray field can't wreck the math.
+ */
+export function parsePercent(value) {
+  let n = typeof value === 'number' ? value : null;
+  if (typeof value === 'string') {
+    const m = value.match(/(\d+(?:\.\d+)?)\s*%?/);
+    n = m ? parseFloat(m[1]) : null;
+  }
+  if (n == null || !Number.isFinite(n) || n < 0) return null;
+  const frac = n > 1 ? n / 100 : n;
+  // A buyer's premium outside 0-50% is a misread field, not a real rate.
+  return frac > 0 && frac <= 0.5 ? frac : null;
 }
 
 function parseDate(value) {
