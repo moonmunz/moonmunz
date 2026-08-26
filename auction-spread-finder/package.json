@@ -1,0 +1,21 @@
+{
+  "name": "auction-spread-finder",
+  "version": "1.0.0",
+  "description": "Finds AuctionNinja lots near 06897 with a real net spread against eBay comps.",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node bin/cli.js serve",
+    "serve": "node bin/cli.js serve",
+    "refresh": "node bin/cli.js refresh",
+    "probe": "node bin/cli.js probe",
+    "doctor": "node bin/cli.js doctor",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  },
+  "optionalDependencies": {},
+  "comment": "playwright is intentionally NOT a dependency -- it pulls a ~300MB browser. Install it only if `npm run probe` says the page renders client-side."
+}

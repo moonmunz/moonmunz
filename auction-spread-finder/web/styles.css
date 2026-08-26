@@ -1,0 +1,166 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-2: #1e222b;
+  --line: #2a2f3a;
+  --text: #e8eaed;
+  --muted: #9aa3b2;
+  --accent: #4ade80;
+  --accent-dim: #16351f;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --link: #7dd3fc;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f0f2f5;
+    --line: #dfe3e8;
+    --text: #14171c;
+    --muted: #5f6772;
+    --accent: #15803d;
+    --accent-dim: #dcfce7;
+    --warn: #b45309;
+    --danger: #b91c1c;
+    --link: #0369a1;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ---- top bar ---- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 16px 24px;
+  border-bottom: 1px solid var(--line); background: var(--panel);
+  position: sticky; top: 0; z-index: 10;
+}
+.brand h1 { margin: 0; font-size: 18px; letter-spacing: -0.01em; }
+.brand .sub { color: var(--muted); font-size: 13px; }
+.actions { display: flex; align-items: center; gap: 12px; }
+.lastrun { color: var(--muted); font-size: 13px; }
+
+.btn {
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+  padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: #04140a; border-color: transparent; font-weight: 600; }
+@media (prefers-color-scheme: light) { .btn.primary { color: #fff; } }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- banner ---- */
+.banner {
+  margin: 16px 24px 0; padding: 12px 16px; border-radius: 8px;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  font-size: 14px; white-space: pre-wrap;
+}
+.banner code { background: rgba(128,128,128,0.2); padding: 1px 5px; border-radius: 4px; }
+
+/* ---- controls ---- */
+.controls {
+  display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap;
+  padding: 18px 24px; border-bottom: 1px solid var(--line);
+}
+.ctl { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.ctl em { color: var(--text); font-style: normal; }
+.inline { display: flex; align-items: center; gap: 4px; }
+.prefix { color: var(--muted); }
+input[type="number"] {
+  width: 110px; padding: 7px 10px; border-radius: 7px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 15px;
+}
+input[type="range"] { width: 180px; accent-color: var(--accent); }
+.stats { margin-left: auto; color: var(--muted); font-size: 13px; text-align: right; }
+
+/* ---- results ---- */
+main { padding: 20px 24px 64px; display: grid; gap: 14px; }
+
+.lot {
+  display: grid; grid-template-columns: 96px 1fr auto; gap: 18px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+}
+.lot img {
+  width: 96px; height: 96px; object-fit: cover; border-radius: 8px;
+  background: var(--panel-2);
+}
+.lot .noimg {
+  width: 96px; height: 96px; border-radius: 8px; background: var(--panel-2);
+  display: grid; place-items: center; color: var(--muted); font-size: 11px;
+}
+
+.lot-title { font-weight: 600; margin: 0 0 6px; font-size: 15px; }
+.lot-title a { color: var(--text); text-decoration: none; }
+.lot-title a:hover { color: var(--link); }
+
+.meta { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+}
+.badge.high { background: var(--accent-dim); color: var(--accent); }
+.badge.med { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.badge.low { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+
+/* the math, laid out so it can be checked at a glance */
+.math {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 10px; background: var(--panel-2); border-radius: 8px; padding: 10px 12px; font-size: 13px;
+}
+.math div { display: flex; flex-direction: column; }
+.math .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+.math .v { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.spread { text-align: right; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 150px; }
+.spread .big { font-size: 30px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+.spread .lbl { color: var(--muted); font-size: 12px; }
+.spread .maxbid { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.spread .maxbid b { font-variant-numeric: tabular-nums; font-size: 16px; }
+
+details.comps { margin-top: 10px; }
+details.comps summary { cursor: pointer; color: var(--link); font-size: 13px; }
+.comp-list { list-style: none; padding: 8px 0 0; margin: 0; display: grid; gap: 5px; }
+.comp-list li { display: flex; gap: 10px; font-size: 13px; color: var(--muted); }
+.comp-list a { color: var(--link); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.comp-price { font-variant-numeric: tabular-nums; min-width: 68px; color: var(--text); }
+.reasons { margin-top: 8px; font-size: 12px; color: var(--muted); }
+
+.empty { text-align: center; padding: 64px 24px; color: var(--muted); }
+.empty h2 { color: var(--text); font-size: 17px; margin: 0 0 8px; }
+
+/* ---- progress overlay ---- */
+/* A class selector's `display` beats the UA `[hidden] { display: none }` rule,
+   so `hidden` must be re-asserted explicitly or the overlay never hides. */
+[hidden] { display: none !important; }
+
+.progress { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: grid; place-items: center; z-index: 50; }
+.progress-inner {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 24px; display: flex; gap: 16px; min-width: 380px; max-width: 620px;
+}
+.progress pre {
+  margin: 8px 0 0; font-size: 12px; color: var(--muted);
+  max-height: 220px; overflow: auto; white-space: pre-wrap;
+}
+.spinner {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--line); border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 720px) {
+  .lot { grid-template-columns: 1fr; }
+  .spread { text-align: left; }
+}

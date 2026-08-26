@@ -1,0 +1,41 @@
+{
+  "_comment": "Copy to config.json and edit. config.json is gitignored.",
+
+  "location": { "zip": "06897", "radiusMiles": 40 },
+
+  "sources": [
+    {
+      "_comment": "Paste URLs straight from your browser after searching AuctionNinja the way you like. Each is crawled on every refresh.",
+      "name": "near-06897",
+      "url": "https://www.auctionninja.com/sales",
+      "enabled": true
+    }
+  ],
+
+  "economics": {
+    "_comment": "Check the buyer's premium on the actual sale -- it varies by seller, and it is the single biggest input.",
+    "buyersPremiumPct": 0.15,
+    "salesTaxPct": 0.0635,
+    "ebayFinalValuePct": 0.1335,
+    "ebayPerOrderFee": 0.4,
+    "assumedShippingCost": 12.0,
+    "askToSaleRatio": 0.75
+  },
+
+  "filters": {
+    "minSpreadDollars": 250,
+    "minConfidence": 0.45,
+    "minCompCount": 3,
+    "maxLotPriceDollars": 2000
+  },
+
+  "ebay": {
+    "_comment": "Or use EBAY_CLIENT_ID / EBAY_CLIENT_SECRET env vars instead.",
+    "clientId": "",
+    "clientSecret": "",
+    "marketplaceId": "EBAY_US",
+    "compCacheHours": 72
+  },
+
+  "server": { "port": 4317 }
+}

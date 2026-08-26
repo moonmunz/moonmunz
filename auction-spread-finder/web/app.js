@@ -1,0 +1,200 @@
+const $ = (id) => document.getElementById(id);
+const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const money2 = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+let pollTimer = null;
+
+async function load() {
+  const params = new URLSearchParams({
+    minSpread: $('minSpread').value,
+    minConfidence: String(Number($('minConfidence').value) / 100),
+  });
+
+  const res = await fetch(`/api/opportunities?${params}`);
+  const data = await res.json();
+
+  renderStats(data.stats);
+  renderBanner(data.stats);
+  renderResults(data.opportunities, data.stats);
+}
+
+async function loadConfig() {
+  const cfg = await (await fetch('/api/config')).json();
+  $('locationLabel').textContent = `${cfg.location.zip} · within ${cfg.location.radiusMiles} mi`;
+  $('minSpread').value = cfg.filters.minSpreadDollars;
+  $('minConfidence').value = Math.round(cfg.filters.minConfidence * 100);
+  $('confVal').textContent = `${Math.round(cfg.filters.minConfidence * 100)}%`;
+}
+
+function renderStats(stats) {
+  $('stats').innerHTML =
+    `${stats.passing} of ${stats.totalPriced} priced lots clear your bar<br>` +
+    `<span style="opacity:0.7">${stats.totalTracked} lots tracked total</span>`;
+
+  const run = stats.lastRun;
+  $('lastRun').textContent = run
+    ? `updated ${timeAgo(new Date(run.at))}`
+    : 'never refreshed';
+}
+
+/** Surface setup problems prominently -- silent zero-results is the worst UX here. */
+function renderBanner(stats) {
+  const banner = $('banner');
+  const run = stats.lastRun;
+
+  if (!run) {
+    banner.hidden = false;
+    banner.innerHTML = 'No data yet. Hit <b>Refresh</b> to scrape AuctionNinja and price the lots.';
+    return;
+  }
+
+  const msgs = [...(run.warnings ?? []), ...(run.errors ?? [])];
+  if (msgs.length > 0) {
+    banner.hidden = false;
+    banner.innerHTML = msgs.map(escapeHtml).join('<br><br>');
+    return;
+  }
+  banner.hidden = true;
+}
+
+function renderResults(lots, stats) {
+  const el = $('results');
+
+  if (lots.length === 0) {
+    el.innerHTML = `<div class="empty">
+      <h2>No lots clear ${money($('minSpread').value)} net spread right now</h2>
+      <p>${stats.totalPriced > 0
+        ? 'That is normal on a slow day. Try lowering the spread or confidence sliders.'
+        : 'Nothing has been priced yet — refresh, and check the notice above.'}</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = lots.map(renderLot).join('');
+}
+
+function renderLot(lot) {
+  const v = lot.valuation;
+  const c = lot.confidence;
+  const conf = Math.round(c.score * 100);
+  const cls = conf >= 65 ? 'high' : conf >= 45 ? 'med' : 'low';
+
+  // Estate-listing images 404 often enough that a broken-image icon is common.
+  const img = lot.image
+    ? `<img src="${escapeHtml(lot.image)}" alt="" loading="lazy"
+         onerror="this.outerHTML='&lt;div class=\\'noimg\\'&gt;no image&lt;/div&gt;'">`
+    : `<div class="noimg">no image</div>`;
+
+  const ends = lot.endsAt
+    ? `<span>closes ${timeUntil(new Date(lot.endsAt))}</span>`
+    : '';
+
+  const comps = (lot.comps ?? []).map((comp) => `
+    <li>
+      <span class="comp-price">${money2(comp.price)}</span>
+      <a href="${escapeHtml(comp.url)}" target="_blank" rel="noopener">${escapeHtml(comp.title)}</a>
+    </li>`).join('');
+
+  return `
+  <article class="lot">
+    ${img}
+    <div>
+      <h3 class="lot-title">
+        ${lot.url ? `<a href="${escapeHtml(lot.url)}" target="_blank" rel="noopener">${escapeHtml(lot.title)}</a>`
+                  : escapeHtml(lot.title)}
+      </h3>
+      <div class="meta">
+        <span class="badge ${cls}">${conf}% confidence</span>
+        ${ends}
+        ${lot.location ? `<span>${escapeHtml(lot.location)}</span>` : ''}
+        <span>searched: “${escapeHtml(lot.query ?? '')}”</span>
+      </div>
+
+      <div class="math">
+        <div><span class="k">Current bid</span><span class="v">${money2(v.currentBid)}</span></div>
+        <div><span class="k">+ premium/tax</span><span class="v">${money2(v.buyCost.total)}</span></div>
+        <div><span class="k">eBay median ask</span><span class="v">${money2(v.market.askMedian)}</span></div>
+        <div><span class="k">Est. sale price</span><span class="v">${money2(v.market.estimatedSalePrice)}</span></div>
+        <div><span class="k">− eBay fees/ship</span><span class="v">${money2(v.sell.net)}</span></div>
+        <div><span class="k">ROI</span><span class="v">${v.roi != null ? `${Math.round(v.roi * 100)}%` : '—'}</span></div>
+      </div>
+
+      <details class="comps">
+        <summary>${lot.comps?.length ?? 0} eBay comps · why ${conf}% confidence</summary>
+        <ul class="comp-list">${comps}</ul>
+        <div class="reasons">${(c.reasons ?? []).map(escapeHtml).join(' · ')}</div>
+      </details>
+    </div>
+
+    <div class="spread">
+      <span class="big">${money(v.netSpread)}</span>
+      <span class="lbl">net spread at current bid</span>
+      <div class="maxbid">
+        <span class="lbl">bid up to</span><br>
+        <b>${money2(v.maxBid)}</b>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* ---- refresh ---- */
+
+async function startRefresh() {
+  $('refreshBtn').disabled = true;
+  $('progress').hidden = false;
+  $('progressLog').textContent = 'starting…';
+
+  const res = await fetch('/api/refresh', { method: 'POST' });
+  if (res.status === 409) {
+    $('progressLog').textContent = 'A refresh is already running.';
+  }
+  pollTimer = setInterval(pollStatus, 900);
+}
+
+async function pollStatus() {
+  const state = await (await fetch('/api/refresh-status')).json();
+  $('progressLog').textContent = state.log.slice(-14).join('\n');
+
+  if (!state.running) {
+    clearInterval(pollTimer);
+    $('progress').hidden = true;
+    $('refreshBtn').disabled = false;
+    await load();
+  }
+}
+
+/* ---- helpers ---- */
+
+function timeAgo(date) {
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function timeUntil(date) {
+  const mins = Math.floor((date.getTime() - Date.now()) / 60000);
+  if (mins < 0) return 'ended';
+  if (mins < 60) return `in ${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `in ${hrs}h`;
+  return `in ${Math.floor(hrs / 24)}d`;
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (ch) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+/* ---- wire up ---- */
+$('refreshBtn').addEventListener('click', startRefresh);
+$('minSpread').addEventListener('change', load);
+$('minConfidence').addEventListener('input', (e) => {
+  $('confVal').textContent = `${e.target.value}%`;
+});
+$('minConfidence').addEventListener('change', load);
+
+await loadConfig();
+await load();

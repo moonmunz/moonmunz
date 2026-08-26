@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auction Spread Finder</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Auction Spread Finder</h1>
+      <span class="sub" id="locationLabel"></span>
+    </div>
+    <div class="actions">
+      <span class="lastrun" id="lastRun"></span>
+      <button id="refreshBtn" class="btn primary">Refresh</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <section class="controls">
+    <label class="ctl">
+      <span>Min net spread</span>
+      <div class="inline">
+        <span class="prefix">$</span>
+        <input type="number" id="minSpread" value="250" step="25" min="0">
+      </div>
+    </label>
+    <label class="ctl">
+      <span>Min confidence <em id="confVal">45%</em></span>
+      <input type="range" id="minConfidence" min="0" max="100" value="45">
+    </label>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <main id="results"></main>
+
+  <div id="progress" class="progress" hidden>
+    <div class="progress-inner">
+      <div class="spinner"></div>
+      <div>
+        <strong>Refreshing…</strong>
+        <pre id="progressLog"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

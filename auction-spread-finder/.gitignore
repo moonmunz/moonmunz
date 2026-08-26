@@ -1,0 +1,7 @@
+node_modules/
+
+# Your local settings and API keys.
+config.json
+
+# Scraped lots, cached comps, probe dumps.
+data/
