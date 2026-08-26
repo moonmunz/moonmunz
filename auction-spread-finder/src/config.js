@@ -111,6 +111,10 @@ const DEFAULTS = {
 
   server: {
     port: 4317,
+    // Hosted deployments refresh themselves on this cadence so data is fresh
+    // when you open the page. 0 disables it (the local default -- you press
+    // Refresh). Set via REFRESH_INTERVAL_HOURS.
+    refreshIntervalHours: 0,
     // Bind to loopback only: this app holds your eBay API keys and exposes a
     // settings endpoint, neither of which belong on a coffee-shop network.
     // Set to '0.0.0.0' only if you want to reach it from another device
@@ -152,6 +156,9 @@ export function loadConfig() {
   // interfaces; locally we stay on loopback.
   if (process.env.PORT) cfg.server.port = Number(process.env.PORT);
   if (process.env.HOST) cfg.server.host = process.env.HOST;
+  if (process.env.REFRESH_INTERVAL_HOURS) {
+    cfg.server.refreshIntervalHours = Number(process.env.REFRESH_INTERVAL_HOURS);
+  }
   return cfg;
 }
 

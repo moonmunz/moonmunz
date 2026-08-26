@@ -153,6 +153,68 @@ deliberately *not* a default dependency — it pulls ~300MB.
 
 ---
 
+## Hosting it (log in from anywhere)
+
+Once Apify is doing the scraping, this app no longer needs to run on your own
+machine — the reason it had to (residential IP) is gone. Hosting it means a URL
+you open on any device, with the data already refreshed.
+
+**Cost:** about $7/month for Render's Starter plan, plus whatever Apify costs
+you. Render's free plan won't work — it sleeps after inactivity and has no
+persistent disk.
+
+### Steps
+
+1. **Put this code in a GitHub repo.** In this folder:
+   ```bash
+   git init && git add . && git commit -m "Auction spread finder"
+   git branch -M main
+   ```
+   Make an empty repo on github.com (no README, no .gitignore — you have both),
+   then:
+   ```bash
+   git remote add origin https://github.com/<you>/auction-spread-finder.git
+   git push -u origin main
+   ```
+   Make it **private** — it's yours, and there's no reason for it to be public.
+
+2. **Deploy on Render.** Sign up at [render.com](https://render.com), connect
+   your GitHub, then **New → Blueprint** and pick the repo. The `render.yaml`
+   in this folder configures everything — plan, disk, health check, refresh
+   schedule — so you shouldn't have to fill in forms.
+
+3. **Set the four secrets** when Render prompts:
+
+   | Variable | What to put |
+   |---|---|
+   | `APP_PASSWORD` | A password you invent. This is what you'll type to log in. |
+   | `APIFY_TOKEN` | Apify Console → Settings → Integrations |
+   | `EBAY_CLIENT_ID` | Your eBay App ID |
+   | `EBAY_CLIENT_SECRET` | Your eBay Cert ID |
+
+   Render stores these encrypted. They're never in the repo.
+
+4. **Schedule the scrape in Apify.** Apify Console → Schedules → run your Actor
+   daily (6am works). The hosted app is set to `mode: 'last'`, so it reads
+   whatever that run produced.
+
+5. **Open your Render URL**, enter your password, press Refresh once to confirm.
+
+After that it refreshes itself every 6 hours, so the spreads are current when
+you open it.
+
+### About the password
+
+Setting `APP_PASSWORD` turns on a login screen. The app **refuses to start**
+if it's told to listen on a public interface without one — it holds your API
+keys and has a Refresh button that spends Apify credit, so an open deployment
+is a real hazard. That guard is deliberate; don't work around it.
+
+Sessions last 30 days and survive restarts. Changing the password signs out
+every device.
+
+---
+
 ## Running it every day
 
 ### Why this runs locally and not on Vercel/Netlify/Lambda

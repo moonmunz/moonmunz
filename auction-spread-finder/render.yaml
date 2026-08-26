@@ -1,0 +1,41 @@
+# Render blueprint. With this file in the repo, Render can set the whole
+# service up from a "New Blueprint" deploy instead of you configuring it by
+# hand. See the Hosting section of README.md.
+services:
+  - type: web
+    name: auction-spread-finder
+    runtime: node
+    plan: starter          # $7/mo. The free plan sleeps and has no disk.
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+
+    envVars:
+      # Bind all interfaces so Render's router can reach the app. The server
+      # refuses to start this way unless APP_PASSWORD is set.
+      - key: HOST
+        value: 0.0.0.0
+      - key: NODE_ENV
+        value: production
+      # Where the persistent disk is mounted.
+      - key: DATA_DIR
+        value: /var/data
+      # Refresh in the background so data is current when you open the page.
+      - key: REFRESH_INTERVAL_HOURS
+        value: "6"
+
+      # Secrets: Render prompts for these on deploy and stores them encrypted.
+      # They are never committed to the repo.
+      - key: APP_PASSWORD
+        sync: false
+      - key: APIFY_TOKEN
+        sync: false
+      - key: EBAY_CLIENT_ID
+        sync: false
+      - key: EBAY_CLIENT_SECRET
+        sync: false
+
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1

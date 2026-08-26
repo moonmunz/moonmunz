@@ -48,6 +48,8 @@ body {
 .brand .sub { color: var(--muted); font-size: 13px; }
 .actions { display: flex; align-items: center; gap: 12px; }
 .lastrun { color: var(--muted); font-size: 13px; }
+.logout { color: var(--muted); font-size: 13px; text-decoration: none; }
+.logout:hover { color: var(--text); text-decoration: underline; }
 
 .btn {
   border: 1px solid var(--line); background: var(--panel-2); color: var(--text);

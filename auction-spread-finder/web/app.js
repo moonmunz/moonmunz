@@ -25,6 +25,16 @@ async function loadConfig() {
   currentConfig = cfg;
 
   $('locationLabel').textContent = `${cfg.location.zip} · within ${cfg.location.radiusMiles} mi`;
+
+  // Only show a sign-out link where there's a session to sign out of.
+  if (cfg.authEnabled && !document.getElementById('logoutLink')) {
+    const a = document.createElement('a');
+    a.id = 'logoutLink';
+    a.href = '/logout';
+    a.className = 'logout';
+    a.textContent = 'Sign out';
+    document.querySelector('.actions').append(a);
+  }
   $('minSpread').value = cfg.filters.minSpreadDollars;
   $('minConfidence').value = Math.round(cfg.filters.minConfidence * 100);
   $('confVal').textContent = `${Math.round(cfg.filters.minConfidence * 100)}%`;

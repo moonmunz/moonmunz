@@ -7,7 +7,10 @@ import { ROOT } from './config.js';
  * of lots at most), and a native module would make `npm install` fragile on
  * whatever machine you run this from. Writes are atomic via rename.
  */
-const DATA_DIR = path.join(ROOT, 'data');
+// Hosted platforms mount persistent storage at their own path; without one,
+// a restart loses bid history and the comp cache (both rebuildable, but the
+// cache loss costs extra eBay calls). DATA_DIR points at the mount.
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
 const LOTS_FILE = path.join(DATA_DIR, 'lots.json');
 const COMPS_FILE = path.join(DATA_DIR, 'comps.json');
 const RUNS_FILE = path.join(DATA_DIR, 'runs.json');
