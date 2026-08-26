@@ -155,9 +155,10 @@ function pick(obj, candidates) {
 }
 
 /**
- * Decide whether a plain object is a lot. Requires a plausible title AND a
- * plausible price AND an id -- that trio is rare enough in nav/config objects
- * to keep false positives near zero.
+ * Decide whether a plain object is a lot. Requires a plausible title, a
+ * plausible price, and something to identify it by -- an id field, or failing
+ * that its listing URL. Title plus price is already rare enough in nav and
+ * config objects to keep false positives near zero.
  */
 export function objectToLot(obj, baseUrl) {
   const title = pick(obj, TITLE_KEYS);
@@ -167,11 +168,15 @@ export function objectToLot(obj, baseUrl) {
   const bid = parsePrice(rawBid);
   if (bid == null) return null;
 
-  const rawId = pick(obj, ID_KEYS);
-  if (rawId == null || typeof rawId === 'object') return null;
-
   const url = resolveUrl(firstString(pick(obj, URL_KEYS)), baseUrl);
   const image = resolveUrl(firstString(pick(obj, IMAGE_KEYS)), baseUrl);
+
+  // Prefer an explicit id, but a listing URL identifies a lot just as well and
+  // some sources ship no id field at all. Requiring one would silently discard
+  // otherwise-complete lots.
+  let rawId = pick(obj, ID_KEYS);
+  if (rawId == null || typeof rawId === 'object') rawId = url ?? null;
+  if (rawId == null) return null;
 
   return {
     id: `an:${rawId}`,

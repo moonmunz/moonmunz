@@ -92,3 +92,24 @@ test('redactUrl scrubs even unparseable input', async () => {
   const { redactUrl } = await import('../src/http.js');
   assert.ok(!redactUrl('not a url ?token=LEAKED').includes('LEAKED'));
 });
+
+test('sale pages (no bid) produce an explanation, not silence', async () => {
+  const { normalizeItems } = await import('../src/sources/apify.js');
+  // Exactly the shape the AuctionNinja Actor returned: sales, not lots.
+  const sales = [
+    { image: 'x.jpg', title: 'Mid-Century, Swarovski, Lladro, And More!', currentBid: null,
+      itemUrl: 'https://www.auctionninja.com/a', auctioneer: 'Clearing House', location: 'Fairfield, CT' },
+    { image: 'y.jpg', title: 'Darien Finds: Extraordinary Furniture', currentBid: null,
+      itemUrl: 'https://www.auctionninja.com/b', auctioneer: 'Darien Scouts', location: 'Darien, CT' },
+  ];
+  assert.equal(normalizeItems(sales).length, 0, 'priceless sales must not become lots');
+});
+
+test('the same Actor returning real lots works fine', async () => {
+  const { normalizeItems } = await import('../src/sources/apify.js');
+  const lots = [
+    { title: 'Sterling Silver Bowl', currentBid: 45, itemUrl: 'https://www.auctionninja.com/l/1' },
+    { title: 'Eames Lounge Chair', currentBid: 450, itemUrl: 'https://www.auctionninja.com/l/2' },
+  ];
+  assert.equal(normalizeItems(lots).length, 2);
+});

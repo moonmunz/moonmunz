@@ -35,13 +35,11 @@ export async function refresh({ onProgress = () => {} } = {}) {
     // Apify replaces the built-in scraper entirely -- running both would just
     // produce duplicate lots and double the cost.
     try {
-      const lots = await fetchFromApify(cfg, { onProgress });
+      const { lots, rawCount, diagnosis } = await fetchFromApify(cfg, { onProgress });
       if (lots.length === 0) {
         summary.sourcesFailed++;
         summary.errors.push(
-          cfg.apify.mode === 'last'
-            ? 'Apify returned no lots. Has the Actor run successfully yet? Run it once in Apify Console, then refresh here.'
-            : 'Apify ran but returned no recognizable lots. Check the Actor input in Settings against the Actor\'s own Input tab.'
+          diagnosis ?? `Apify returned ${rawCount} items but no usable lots.`
         );
       } else {
         summary.sourcesOk++;

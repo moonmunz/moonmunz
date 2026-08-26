@@ -88,7 +88,48 @@ export async function fetchFromApify(cfg, { onProgress = () => {} } = {}) {
     }
   }
 
-  return normalizeItems(items);
+  const lots = normalizeItems(items);
+
+  // Returning items but recognizing none of them is the confusing failure:
+  // the Actor worked, the app shows nothing, and neither says why. Carry
+  // enough detail back for the caller to explain it.
+  return {
+    lots,
+    rawCount: Array.isArray(items) ? items.length : 0,
+    diagnosis: lots.length === 0 ? diagnose(items) : null,
+  };
+}
+
+/**
+ * Work out why nothing was recognized. The common cause is an Actor that
+ * scraped sale pages rather than individual lots -- those have titles and URLs
+ * but no bid, and a lot without a price cannot be valued.
+ */
+function diagnose(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return 'The Actor returned no items at all. Check its input in Apify Console.';
+  }
+
+  const sample = items.find((i) => i && typeof i === 'object') ?? {};
+  const keys = Object.keys(sample);
+
+  const priceKeys = ['currentbid', 'currentprice', 'highbid', 'bid', 'price', 'startingbid'];
+  const priced = keys.filter((k) => priceKeys.includes(k.toLowerCase().replace(/[_\-\s]/g, '')));
+  const hasPriceField = priced.length > 0;
+  const allNull = hasPriceField && items.every((i) => priced.every((k) => i?.[k] == null));
+
+  if (allNull) {
+    return `The Actor returned ${items.length} items, but every one has an empty ${priced.join('/')}. ` +
+      `That usually means it scraped SALE pages (whole auctions) rather than individual LOTS. ` +
+      `In Apify, change the Actor's input so it returns lots — its examples include "scrape lots with bid counts". ` +
+      `Fields it did return: ${keys.slice(0, 12).join(', ')}.`;
+  }
+  if (!hasPriceField) {
+    return `The Actor returned ${items.length} items with no bid or price field at all. ` +
+      `Fields present: ${keys.slice(0, 12).join(', ')}. This app needs a current bid to value a lot.`;
+  }
+  return `The Actor returned ${items.length} items but none had both a title and a usable price. ` +
+    `Fields present: ${keys.slice(0, 12).join(', ')}.`;
 }
 
 async function runSync(API, id, token, input, maxItems) {
