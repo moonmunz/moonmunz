@@ -108,3 +108,42 @@ test('no comps means zero confidence', () => {
   const { score } = scoreConfidence({ title: 'X' }, buildQuery('X'), []);
   assert.equal(score, 0);
 });
+
+test('an item with no bid is still valued', () => {
+  const market = { estimatedSalePrice: 2400, askMedian: 3200, sampleSize: 5 };
+  const v = evaluateLot({ currentBid: null }, market, ECON, FILTERS);
+
+  assert.equal(v.hasBid, false);
+  assert.equal(v.currentBid, null);
+  assert.equal(v.netSpread, null, 'no bid means no spread — profit needs a cost');
+  assert.equal(v.buyCost, null);
+
+  // What IS knowable without a bid:
+  assert.equal(v.market.estimatedSalePrice, 2400);   // what it resells for
+  assert.equal(v.bestCaseNet, 2067.20);              // net if it were free
+  assert.equal(v.maxBid, 1485.82);                   // ceiling to clear $250
+});
+
+test('maxBid is identical whether or not a bid is known', () => {
+  const market = { estimatedSalePrice: 2400 };
+  const withBid = evaluateLot({ currentBid: 450 }, market, ECON, FILTERS);
+  const without = evaluateLot({ currentBid: null }, market, ECON, FILTERS);
+
+  // The ceiling depends only on resale value, never on what's been bid.
+  assert.equal(withBid.maxBid, without.maxBid);
+});
+
+test('paying exactly maxBid on a no-bid item clears the target', () => {
+  const market = { estimatedSalePrice: 900 };
+  const { maxBid } = evaluateLot({ currentBid: null }, market, ECON, FILTERS);
+  const atCeiling = evaluateLot({ currentBid: maxBid }, market, ECON, FILTERS);
+  assert.ok(Math.abs(atCeiling.netSpread - 250) < 0.05,
+    `spread at the ceiling was ${atCeiling.netSpread}, expected ~250`);
+});
+
+test('a low-value item cannot clear the bar at any price', () => {
+  // $80 resale: after fees there is not $250 of room even if it were free.
+  const v = evaluateLot({ currentBid: null }, { estimatedSalePrice: 80 }, ECON, FILTERS);
+  assert.ok(v.bestCaseNet < 250, 'should fail the no-bid filter');
+  assert.equal(v.maxBid, 0, 'and there is no price worth paying');
+});

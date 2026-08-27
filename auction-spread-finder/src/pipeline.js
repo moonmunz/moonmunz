@@ -88,11 +88,13 @@ export async function refresh({ onProgress = () => {} } = {}) {
 
   /* ---- 2. Comp + score ---- */
   const needPricing = store.allLots()
-    .filter((lot) => lot.currentBid != null)
-    .filter((lot) => lot.currentBid <= cfg.filters.maxLotPriceDollars)
+    // A missing bid is no longer disqualifying -- the item is still worth
+    // valuing, and the max-bid figure doesn't depend on the current bid.
+    .filter((lot) => lot.currentBid == null || lot.currentBid <= cfg.filters.maxLotPriceDollars)
     .filter((lot) => !isEnded(lot))
-    // Price the cheapest first: that's where the spread usually is.
-    .sort((a, b) => a.currentBid - b.currentBid)
+    // Cheapest first, since that's where the spread usually is. Lots with no
+    // bid sort alongside the cheap ones: they may not have opened yet.
+    .sort((a, b) => (a.currentBid ?? 0) - (b.currentBid ?? 0))
     .slice(0, cfg.http.maxDetailFetches);
 
   let credsMissing = false;
@@ -173,14 +175,23 @@ export function getOpportunities(overrides = {}) {
 
   const all = store.allLots().filter((lot) => lot.valuation && lot.confidence);
 
-  const passing = all.filter((lot) =>
-    lot.valuation.netSpread >= filters.minSpreadDollars &&
-    lot.confidence.score >= filters.minConfidence &&
-    (lot.comps?.length ?? 0) >= filters.minCompCount &&
-    !isEnded(lot)
-  );
+  const passing = all.filter((lot) => {
+    if (lot.confidence.score < filters.minConfidence) return false;
+    if ((lot.comps?.length ?? 0) < filters.minCompCount) return false;
+    if (isEnded(lot)) return false;
 
-  passing.sort((a, b) => b.valuation.netSpread - a.valuation.netSpread);
+    // With a bid, the test is the actual spread at that bid. Without one, the
+    // question is whether the item could clear the bar at any price -- i.e.
+    // whether what it resells for, after fees, leaves enough room.
+    return lot.valuation.hasBid
+      ? lot.valuation.netSpread >= filters.minSpreadDollars
+      : lot.valuation.bestCaseNet >= filters.minSpreadDollars;
+  });
+
+  // Rank by whichever number the lot actually has: realized spread when a bid
+  // is known, otherwise headroom.
+  const rank = (lot) => (lot.valuation.hasBid ? lot.valuation.netSpread : lot.valuation.bestCaseNet);
+  passing.sort((a, b) => rank(b) - rank(a));
 
   return {
     opportunities: passing,

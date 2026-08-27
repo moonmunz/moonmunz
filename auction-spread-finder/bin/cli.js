@@ -27,11 +27,18 @@ switch (cmd) {
 
     const { opportunities, stats } = getOpportunities();
     const cfg = loadConfig();
-    console.log(`\n${opportunities.length} lots clear a $${cfg.filters.minSpreadDollars} net spread:\n`);
+    console.log(`\n${opportunities.length} lots can clear a $${cfg.filters.minSpreadDollars} net spread:\n`);
     for (const lot of opportunities.slice(0, 20)) {
-      console.log(`  $${String(lot.valuation.netSpread).padStart(7)}  ${lot.title.slice(0, 55)}`);
-      console.log(`            bid $${lot.currentBid} -> est. sale $${lot.valuation.market.estimatedSalePrice}` +
-                  `  (confidence ${(lot.confidence.score * 100).toFixed(0)}%)`);
+      const v = lot.valuation;
+      const headline = v.hasBid ? `$${v.netSpread}` : `$${v.market.estimatedSalePrice}`;
+      console.log(`  ${headline.padStart(9)}  ${lot.title.slice(0, 55)}`);
+      console.log(
+        v.hasBid
+          ? `             bid $${v.currentBid} -> est. sale $${v.market.estimatedSalePrice}` +
+            `  (confidence ${(lot.confidence.score * 100).toFixed(0)}%)`
+          : `             no bid listed · resale $${v.market.estimatedSalePrice}` +
+            ` · pay up to $${v.maxBid}  (confidence ${(lot.confidence.score * 100).toFixed(0)}%)`
+      );
     }
     if (stats.totalPriced === 0) {
       console.log('  (nothing priced yet -- see warnings above)');

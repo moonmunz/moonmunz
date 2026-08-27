@@ -160,13 +160,23 @@ function pick(obj, candidates) {
  * that its listing URL. Title plus price is already rare enough in nav and
  * config objects to keep false positives near zero.
  */
-export function objectToLot(obj, baseUrl) {
+export function objectToLot(obj, baseUrl, { requirePrice = true } = {}) {
   const title = pick(obj, TITLE_KEYS);
   if (typeof title !== 'string' || title.length < 4 || title.length > 300) return null;
 
   const rawBid = pick(obj, BID_KEYS);
   const bid = parsePrice(rawBid);
-  if (bid == null) return null;
+
+  /**
+   * A price is required when walking a page's embedded JSON, where most
+   * objects are nav entries and config blobs and title+price+id is what
+   * separates a real lot from noise.
+   *
+   * It is NOT required when the caller already knows every record is an item
+   * -- a dedicated scraper's output, say. Many listings have no live bid yet,
+   * and discarding them loses items worth valuing.
+   */
+  if (bid == null && requirePrice) return null;
 
   const url = resolveUrl(firstString(pick(obj, URL_KEYS)), baseUrl);
   const image = resolveUrl(firstString(pick(obj, IMAGE_KEYS)), baseUrl);
@@ -182,7 +192,7 @@ export function objectToLot(obj, baseUrl) {
     id: `an:${rawId}`,
     sourceId: String(rawId),
     title: title.trim(),
-    currentBid: bid,
+    currentBid: bid,   // null when the listing shows no bid yet
     url,
     image,
     endsAt: parseDate(pick(obj, END_KEYS)),

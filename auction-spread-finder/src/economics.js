@@ -81,22 +81,48 @@ function trimOutliers(sorted) {
  * the auction is closing, so it's what the UI leads with.
  */
 export function evaluateLot(lot, market, econ, filters) {
-  if (!market || lot.currentBid == null) return null;
+  if (!market) return null;
+
+  const sale = sellProceeds(market.estimatedSalePrice, econ);
+  const maxBid = maxBidForTargetSpread(market.estimatedSalePrice, filters.minSpreadDollars, econ);
+
+  // Many sources publish an item without a live bid -- a sale that hasn't
+  // opened, or a scraper that only reads listing pages. The item is still
+  // worth valuing: what it resells for, and the most you could pay for it,
+  // are both knowable without knowing what anyone has bid so far.
+  if (lot.currentBid == null) {
+    return {
+      currentBid: null,
+      hasBid: false,
+      buyCost: null,
+      sell: sale,
+      netSpread: null,
+      grossSpread: null,
+      roi: null,
+      // The headline when there's no bid: the ceiling you should not cross.
+      maxBid,
+      // Best case, if the item were free. Establishes whether it's worth
+      // chasing at all before you know the price.
+      bestCaseNet: sale.net,
+      market,
+    };
+  }
 
   const bid = lot.currentBid;
   const cost = buyCost(bid, econ);
-  const sale = sellProceeds(market.estimatedSalePrice, econ);
   const netSpread = round2(sale.net - cost.total);
 
   return {
     currentBid: bid,
+    hasBid: true,
     buyCost: cost,
     sell: sale,
     netSpread,
     // Gross spread is the number most people quote. Kept only to show the gap.
     grossSpread: round2(market.estimatedSalePrice - bid),
     roi: cost.total > 0 ? round2(netSpread / cost.total) : null,
-    maxBid: maxBidForTargetSpread(market.estimatedSalePrice, filters.minSpreadDollars, econ),
+    maxBid,
+    bestCaseNet: sale.net,
     market,
   };
 }

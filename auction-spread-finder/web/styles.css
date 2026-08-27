@@ -185,6 +185,7 @@ main { padding: 20px 24px 64px; display: grid; gap: 14px; }
 .math div { display: flex; flex-direction: column; }
 .math .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
 .math .v { font-variant-numeric: tabular-nums; font-weight: 600; }
+.math .nobid { color: var(--muted); font-weight: 400; font-style: italic; }
 
 .spread { text-align: right; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 150px; }
 .spread .big { font-size: 30px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }

@@ -264,10 +264,13 @@ function renderLot(lot) {
       </a>` : ''}
 
       <div class="math">
-        <div><span class="k">Current bid</span><span class="v">${money2(v.currentBid)}</span></div>
+        <div>
+          <span class="k">Current bid</span>
+          <span class="v">${v.hasBid ? money2(v.currentBid) : '<span class="nobid">none listed</span>'}</span>
+        </div>
         <div>
           <span class="k">+ premium/tax${v.premiumSource === 'listing' ? '' : ' *'}</span>
-          <span class="v">${money2(v.buyCost.total)}</span>
+          <span class="v">${v.hasBid ? money2(v.buyCost.total) : '—'}</span>
         </div>
         <div><span class="k">eBay median ask</span><span class="v">${money2(v.market.askMedian)}</span></div>
         <div><span class="k">Est. sale price</span><span class="v">${money2(v.market.estimatedSalePrice)}</span></div>
@@ -289,12 +292,22 @@ function renderLot(lot) {
     </div>
 
     <div class="spread">
-      <span class="big">${money(v.netSpread)}</span>
-      <span class="lbl">net spread at current bid</span>
-      <div class="maxbid">
-        <span class="lbl">bid up to</span><br>
-        <b>${money2(v.maxBid)}</b>
-      </div>
+      ${v.hasBid ? `
+        <span class="big">${money(v.netSpread)}</span>
+        <span class="lbl">net spread at current bid</span>
+        <div class="maxbid">
+          <span class="lbl">bid up to</span><br>
+          <b>${money2(v.maxBid)}</b>
+        </div>
+      ` : `
+        <span class="big">${money(v.market.estimatedSalePrice)}</span>
+        <span class="lbl">est. resale value</span>
+        <div class="maxbid">
+          <span class="lbl">pay no more than</span><br>
+          <b>${money2(v.maxBid)}</b>
+          <span class="lbl">to clear ${money($('minSpread').value)}</span>
+        </div>
+      `}
     </div>
   </article>`;
 }

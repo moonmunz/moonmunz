@@ -157,16 +157,21 @@ async function lastRunItems(API, id, token, maxItems) {
 export function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
 
+  // Every row from a dedicated Actor is already an item, so a missing bid is
+  // not evidence that the row is noise -- plenty of listings simply have no
+  // bid yet. Those are kept and valued from their eBay comps instead.
+  const opts = { requirePrice: false };
+
   const out = new Map();
   for (const item of items) {
     if (!item || typeof item !== 'object') continue;
 
-    let lot = objectToLot(item, BASE_URL);
+    let lot = objectToLot(item, BASE_URL, opts);
 
     if (!lot) {
       for (const value of Object.values(item)) {
         if (value && typeof value === 'object' && !Array.isArray(value)) {
-          lot = objectToLot(value, BASE_URL);
+          lot = objectToLot(value, BASE_URL, opts);
           if (lot) break;
         }
       }

@@ -93,16 +93,33 @@ test('redactUrl scrubs even unparseable input', async () => {
   assert.ok(!redactUrl('not a url ?token=LEAKED').includes('LEAKED'));
 });
 
-test('sale pages (no bid) produce an explanation, not silence', async () => {
+test('items with no bid are kept and valued, not discarded', async () => {
   const { normalizeItems } = await import('../src/sources/apify.js');
-  // Exactly the shape the AuctionNinja Actor returned: sales, not lots.
-  const sales = [
+  // Exactly the shape the AuctionNinja Actor returned: no currentBid at all.
+  const rows = [
     { image: 'x.jpg', title: 'Mid-Century, Swarovski, Lladro, And More!', currentBid: null,
       itemUrl: 'https://www.auctionninja.com/a', auctioneer: 'Clearing House', location: 'Fairfield, CT' },
     { image: 'y.jpg', title: 'Darien Finds: Extraordinary Furniture', currentBid: null,
       itemUrl: 'https://www.auctionninja.com/b', auctioneer: 'Darien Scouts', location: 'Darien, CT' },
   ];
-  assert.equal(normalizeItems(sales).length, 0, 'priceless sales must not become lots');
+
+  const lots = normalizeItems(rows);
+  assert.equal(lots.length, 2, 'a missing bid must not disqualify an item');
+  assert.ok(lots.every((l) => l.currentBid === null));
+  // Identity falls back to the listing URL, and location still parses.
+  assert.ok(lots.every((l) => l.url?.startsWith('https://www.auctionninja.com')));
+  assert.equal(lots[0].location, 'Fairfield, CT');
+});
+
+test('embedded page JSON still requires a price, to avoid nav-object noise', async () => {
+  const { fromEmbeddedJson } = await import('../src/sources/auctionninja.js');
+  // Walking a whole page's state, title-without-price is almost always a menu
+  // entry rather than a lot, so that path stays strict.
+  const html = `<html><script type="application/json">${JSON.stringify({
+    nav: [{ id: 1, title: 'Browse Estate Sales', url: '/browse' },
+          { id: 2, title: 'How Bidding Works', url: '/help' }],
+  })}</script></html>`;
+  assert.equal(fromEmbeddedJson(html, 'https://www.auctionninja.com').length, 0);
 });
 
 test('the same Actor returning real lots works fine', async () => {
