@@ -204,19 +204,27 @@ details.comps summary { cursor: pointer; color: var(--link); font-size: 13px; }
 .empty { text-align: center; padding: 64px 24px; color: var(--muted); }
 .empty h2 { color: var(--text); font-size: 17px; margin: 0 0 8px; }
 
-/* ---- progress overlay ---- */
+/* ---- progress bar ---- */
 /* A class selector's `display` beats the UA `[hidden] { display: none }` rule,
-   so `hidden` must be re-asserted explicitly or the overlay never hides. */
+   so `hidden` must be re-asserted explicitly or the bar never hides. */
 [hidden] { display: none !important; }
 
-.progress { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: grid; place-items: center; z-index: 50; }
-.progress-inner {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-  padding: 24px; display: flex; gap: 16px; min-width: 380px; max-width: 620px;
+/* Sticks under the header rather than covering the page, so lots priced so
+   far stay visible and keep updating while the rest are fetched. */
+.progress {
+  position: sticky; top: 61px; z-index: 20;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 24px;
+  background: var(--accent-dim);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
+.progress-text { display: flex; gap: 10px; align-items: baseline; flex: 1; min-width: 200px; }
+.progress-text strong { font-size: 14px; }
+.progress-text span { font-size: 13px; color: var(--muted); }
+.btn.small { padding: 4px 10px; font-size: 12px; }
 .progress pre {
-  margin: 8px 0 0; font-size: 12px; color: var(--muted);
-  max-height: 220px; overflow: auto; white-space: pre-wrap;
+  flex-basis: 100%; margin: 6px 0 0; font-size: 12px; color: var(--muted);
+  max-height: 180px; overflow: auto; white-space: pre-wrap;
 }
 .spinner {
   width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;

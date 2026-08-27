@@ -154,6 +154,18 @@
     </div>
   </section>
 
+  <!-- Inline rather than a modal: a pricing pass runs for minutes, and results
+       already computed should stay readable while the rest arrive. -->
+  <div id="progress" class="progress" hidden>
+    <div class="spinner"></div>
+    <div class="progress-text">
+      <strong id="progressHead">Refreshing…</strong>
+      <span id="progressNow"></span>
+    </div>
+    <button id="progressToggle" class="btn small">Details</button>
+    <pre id="progressLog" hidden></pre>
+  </div>
+
   <div id="banner" class="banner" hidden></div>
 
   <section class="controls">
@@ -173,15 +185,7 @@
 
   <main id="results"></main>
 
-  <div id="progress" class="progress" hidden>
-    <div class="progress-inner">
-      <div class="spinner"></div>
-      <div>
-        <strong>Refreshing…</strong>
-        <pre id="progressLog"></pre>
-      </div>
-    </div>
-  </div>
+
 
   <script type="module" src="/app.js"></script>
 </body>

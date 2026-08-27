@@ -69,7 +69,14 @@ export function startServer() {
       }
 
       if (url.pathname === '/api/refresh-status') {
-        return json(res, 200, refreshState);
+        // Include live counts so the page can show progress against a total
+        // rather than an unbounded spinner.
+        const stats = getOpportunities().stats;
+        return json(res, 200, {
+          ...refreshState,
+          priced: stats.totalPriced,
+          tracked: stats.totalTracked,
+        });
       }
 
       if (url.pathname === '/api/config') {

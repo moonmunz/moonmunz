@@ -190,6 +190,11 @@ export async function refresh({ onProgress = () => {} } = {}) {
       pricedAt: new Date().toISOString(),
     });
     summary.lotsPriced++;
+
+    // Persist as we go. A pricing pass can run for minutes, and a lot that's
+    // already been valued shouldn't be invisible until the last one finishes
+    // -- or lost entirely if the run is interrupted.
+    if (summary.lotsPriced % 3 === 0) store.save();
   }
 
   if (ranOutOfTime) {

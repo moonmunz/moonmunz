@@ -188,9 +188,15 @@ function renderBanner(stats) {
   const banner = $('banner');
   const run = stats.lastRun;
 
+  // While a refresh is in flight the progress bar already says what's
+  // happening; "no data yet" alongside it is both wrong and alarming.
+  const refreshing = !$('progress').hidden;
+
   if (!run) {
-    banner.hidden = false;
-    banner.innerHTML = 'No data yet. Hit <b>Refresh</b> to scrape AuctionNinja and price the lots.';
+    banner.hidden = refreshing;
+    if (!refreshing) {
+      banner.innerHTML = 'No data yet. Hit <b>Refresh</b> to scrape AuctionNinja and price the lots.';
+    }
     return;
   }
 
@@ -210,7 +216,7 @@ function renderResults(lots, stats) {
     el.innerHTML = `<div class="empty">
       <h2>No lots clear ${money($('minSpread').value)} net spread right now</h2>
       <p>${stats.totalPriced > 0
-        ? 'That is normal on a slow day. Try lowering the spread or confidence sliders.'
+        ? `${stats.totalPriced} lots priced, none clearing your bar. That is normal on a slow day — try lowering the spread or confidence sliders.`
         : 'Nothing has been priced yet — refresh, and check the notice above.'}</p>
     </div>`;
     return;
@@ -324,12 +330,21 @@ async function startRefresh() {
   if (res.status === 409) {
     $('progressLog').textContent = 'A refresh is already running.';
   }
-  pollTimer = setInterval(pollStatus, 900);
+  // Slower than the old modal polled: each tick now also re-renders the list,
+  // and pricing a lot takes far longer than a second anyway.
+  pollTimer = setInterval(pollStatus, 2500);
+  pollStatus();
 }
 
 async function pollStatus() {
   const state = await (await fetch('/api/refresh-status')).json();
   $('progressLog').textContent = state.log.slice(-14).join('\n');
+
+  // Show what's been priced so far, and refresh the list underneath, so a
+  // long pricing pass reveals results as they land instead of all at once.
+  $('progressNow').textContent =
+    `${state.priced} of ${state.tracked} lots priced — results appear below as they finish`;
+  await load();
 
   if (!state.running) {
     clearInterval(pollTimer);
@@ -376,6 +391,11 @@ $('saveSettings').addEventListener('click', saveSettings);
 $('setApifyEnabled').addEventListener('change', syncApifyFields);
 $('setApifyMode').addEventListener('change', syncApifyFields);
 $('setCompSource').addEventListener('change', syncCompFields);
+$('progressToggle').addEventListener('click', () => {
+  const log = $('progressLog');
+  log.hidden = !log.hidden;
+  $('progressToggle').textContent = log.hidden ? 'Details' : 'Hide';
+});
 $('minSpread').addEventListener('change', load);
 $('minConfidence').addEventListener('input', (e) => {
   $('confVal').textContent = `${e.target.value}%`;
