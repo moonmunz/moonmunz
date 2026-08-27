@@ -107,7 +107,10 @@ export async function fetchFromApify(cfg, { onProgress = () => {} } = {}) {
  */
 function diagnose(items) {
   if (!Array.isArray(items) || items.length === 0) {
-    return 'The Actor returned no items at all. Check its input in Apify Console.';
+    // Say what was actually looked at, so this is fixable without guessing.
+    return `No items found. ${lastStrategy ?? 'No route returned data.'} ` +
+      `Check in Apify Console that the Actor has a run marked SUCCEEDED whose ` +
+      `Output tab shows rows, and that the Actor ID in Settings matches that Actor.`;
   }
 
   const sample = items.find((i) => i && typeof i === 'object') ?? {};
@@ -142,11 +145,69 @@ async function runSync(API, id, token, input, maxItems) {
   });
 }
 
+/**
+ * Read the newest successful run's results.
+ *
+ * Apify offers a `runs/last` shortcut, but it has returned an empty list for a
+ * run that plainly had items -- most likely because the `status` filter is not
+ * honoured the same way on the nested dataset resource. Rather than depend on
+ * one endpoint's exact semantics, try progressively more explicit routes and
+ * take the first that yields anything. The last route asks for the run list
+ * directly and reads that run's own dataset, which leaves nothing to infer.
+ */
 async function lastRunItems(API, id, token, maxItems) {
-  const url = `${API}/acts/${id}/runs/last/dataset/items`
-    + `?token=${encodeURIComponent(token)}&status=SUCCEEDED`
-    + (maxItems ? `&limit=${maxItems}` : '');
-  return fetchJson(url);
+  const t = encodeURIComponent(token);
+  const limit = maxItems ? `&limit=${maxItems}` : '';
+
+  const attempts = [
+    ['last-run + status filter', `${API}/acts/${id}/runs/last/dataset/items?token=${t}&status=SUCCEEDED${limit}`],
+    ['last-run, any status', `${API}/acts/${id}/runs/last/dataset/items?token=${t}${limit}`],
+  ];
+
+  for (const [label, url] of attempts) {
+    const items = await tryJson(url);
+    if (Array.isArray(items) && items.length > 0) {
+      lastStrategy = label;
+      return items;
+    }
+  }
+
+  // Most explicit: list recent runs, pick the newest succeeded one, read its
+  // dataset by id.
+  const runs = await tryJson(`${API}/acts/${id}/runs?token=${t}&desc=1&limit=10`);
+  const list = runs?.data?.items ?? runs?.items ?? [];
+  const succeeded = list.find((r) => r?.status === 'SUCCEEDED' && r?.defaultDatasetId);
+
+  if (succeeded) {
+    const items = await tryJson(
+      `${API}/datasets/${succeeded.defaultDatasetId}/items?token=${t}${limit}`
+    );
+    if (Array.isArray(items) && items.length > 0) {
+      lastStrategy = `explicit dataset ${succeeded.defaultDatasetId}`;
+      return items;
+    }
+    lastStrategy = `run ${succeeded.id} succeeded but its dataset is empty`;
+    return [];
+  }
+
+  lastStrategy = list.length > 0
+    ? `${list.length} run(s) found, none SUCCEEDED (newest: ${list[0]?.status})`
+    : 'no runs found for this Actor';
+  return [];
+}
+
+/** Records which route produced the data, for the diagnostic message. */
+let lastStrategy = null;
+
+export function getLastStrategy() { return lastStrategy; }
+
+/** Fetch JSON, treating any failure as "nothing here" so the next route runs. */
+async function tryJson(url) {
+  try {
+    return await fetchJson(url);
+  } catch {
+    return null;
+  }
 }
 
 /**
