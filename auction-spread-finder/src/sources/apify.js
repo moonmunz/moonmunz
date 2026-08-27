@@ -140,6 +140,8 @@ async function runSync(API, id, token, input, maxItems) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input ?? {}),
+    // Starting an Actor and waiting for it far exceeds the default budget.
+    timeoutMs: 310_000,
   });
 }
 

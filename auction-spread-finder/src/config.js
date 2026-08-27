@@ -76,6 +76,10 @@ const DEFAULTS = {
     minConfidence: 0.45,     // hide matches we don't trust
     minCompCount: 3,         // need at least this many eBay comps to trust a price
     maxLotPriceDollars: 2000, // ignore big-ticket lots you don't want to bid on
+    // Wall-clock cap on the pricing phase. A sold-comp lookup waits for a
+    // scraper to run, so across dozens of lots this would otherwise take
+    // hours. Whatever is priced is kept and cached; the next refresh resumes.
+    compBudgetMinutes: 12,
   },
 
   ebay: {

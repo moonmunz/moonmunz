@@ -49,6 +49,9 @@ export async function searchCompsViaApify(query, cfg) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
+    // run-sync blocks until the Actor finishes. Apify cuts it off at 300s, so
+    // allow slightly more than that and let their limit be the one that fires.
+    timeoutMs: 310_000,
   });
 
   return normalizeComps(items);

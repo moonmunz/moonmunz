@@ -100,6 +100,16 @@ export async function refresh({ onProgress = () => {} } = {}) {
   let compFailures = 0;
   let firstCompError = null;
 
+  /**
+   * Each sold-comp lookup can take minutes, because it waits for a scraper to
+   * run. Across dozens of lots that is hours, which is no use to someone
+   * opening the page in the morning. Price as many as fit the budget, keep the
+   * results, and say what was left -- the next refresh resumes from the cache.
+   */
+  const compBudgetMs = (cfg.filters.compBudgetMinutes ?? 12) * 60_000;
+  const compDeadline = Date.now() + compBudgetMs;
+  let ranOutOfTime = false;
+
   for (const lot of needPricing) {
     const queryInfo = buildQuery(lot.title);
     const cacheKey = `ebay:${queryInfo.query.toLowerCase()}`;
@@ -114,6 +124,10 @@ export async function refresh({ onProgress = () => {} } = {}) {
       summary.compsCached++;
     } else {
       if (credsMissing) continue;
+      if (Date.now() > compDeadline) {
+        ranOutOfTime = true;
+        break;
+      }
       try {
         onProgress(`Comping "${queryInfo.query}"`);
         const result = await fetchComps(queryInfo.query, cfg, { onProgress });
@@ -176,6 +190,14 @@ export async function refresh({ onProgress = () => {} } = {}) {
       pricedAt: new Date().toISOString(),
     });
     summary.lotsPriced++;
+  }
+
+  if (ranOutOfTime) {
+    const left = needPricing.length - summary.lotsPriced;
+    summary.warnings.push(
+      `Priced ${summary.lotsPriced} lots before the time budget ran out; ` +
+      `${left} still to go. Refresh again to continue — already-priced lots are cached and won't be re-fetched.`
+    );
   }
 
   store.prune(30);

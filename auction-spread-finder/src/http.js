@@ -34,7 +34,11 @@ export function redactUrl(url) {
 export async function fetchText(url, opts = {}) {
   await throttle(url);
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), cfg.http.timeoutMs);
+  // Most requests are page fetches that should fail fast. Some legitimately
+  // take minutes -- an Apify run-sync call starts an Actor and waits for it to
+  // finish -- so those pass their own budget rather than being cut off at the
+  // default and reported as "operation was aborted".
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? cfg.http.timeoutMs);
   try {
     const res = await fetch(url, {
       signal: ctrl.signal,
