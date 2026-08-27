@@ -104,10 +104,24 @@ const DEFAULTS = {
       token: '',
       maxItems: 50,
       /**
-       * Sent as the Actor's input. {{query}} is replaced with the search term,
-       * anywhere it appears. Copy the real shape from the Actor's Input tab.
+       * Sent as the Actor's input. {{query}} is replaced with the search term
+       * wherever it appears, at any depth.
+       *
+       * This default matches crawloop~ebay-sold-listings-scraper. Every Actor
+       * names its fields differently, so if you use a different one, copy the
+       * shape from its Input tab (the "JSON example" view) and put {{query}}
+       * where the search term goes.
        */
-      inputTemplate: { searchTerms: ['{{query}}'] },
+      inputTemplate: {
+        keywords: ['{{query}}'],
+        count: 10,             // sold listings per item; billed per listing
+        daysToScrape: 90,      // estate items sell slowly -- a wide window helps
+        sortOrder: 'endedRecently',
+        ebaySite: 'ebay.com',
+        itemCondition: 'any',
+        listingType: 'any',
+        dedupeItemIds: true,
+      },
       /**
        * Set true if your Actor returns SOLD listings. Sold prices are already
        * realized, so they skip the ask-to-sale discount.
