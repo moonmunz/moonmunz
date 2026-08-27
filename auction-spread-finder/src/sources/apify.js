@@ -172,27 +172,34 @@ async function lastRunItems(API, id, token, maxItems) {
     }
   }
 
-  // Most explicit: list recent runs, pick the newest succeeded one, read its
-  // dataset by id.
+  // Most explicit: list recent runs and read their datasets directly.
   const runs = await tryJson(`${API}/acts/${id}/runs?token=${t}&desc=1&limit=10`);
   const list = runs?.data?.items ?? runs?.items ?? [];
-  const succeeded = list.find((r) => r?.status === 'SUCCEEDED' && r?.defaultDatasetId);
+  const succeeded = list.filter((r) => r?.status === 'SUCCEEDED' && r?.defaultDatasetId);
 
-  if (succeeded) {
-    const items = await tryJson(
-      `${API}/datasets/${succeeded.defaultDatasetId}/items?token=${t}${limit}`
-    );
+  // A run can succeed and still store nothing -- a misconfigured input, or a
+  // search that matched no listings. An empty newest run must not hide a good
+  // one from earlier, so keep walking back until a dataset actually has rows.
+  let emptyRuns = 0;
+  for (const run of succeeded.slice(0, 5)) {
+    const items = await tryJson(`${API}/datasets/${run.defaultDatasetId}/items?token=${t}${limit}`);
     if (Array.isArray(items) && items.length > 0) {
-      lastStrategy = `explicit dataset ${succeeded.defaultDatasetId}`;
+      lastStrategy = emptyRuns > 0
+        ? `run ${run.id} (skipped ${emptyRuns} newer empty run${emptyRuns > 1 ? 's' : ''})`
+        : `run ${run.id}`;
       return items;
     }
-    lastStrategy = `run ${succeeded.id} succeeded but its dataset is empty`;
-    return [];
+    emptyRuns++;
   }
 
-  lastStrategy = list.length > 0
-    ? `${list.length} run(s) found, none SUCCEEDED (newest: ${list[0]?.status})`
-    : 'no runs found for this Actor';
+  if (succeeded.length > 0) {
+    lastStrategy = `${succeeded.length} successful run(s) checked, every dataset empty ` +
+      `(newest: ${succeeded[0].id}). The Actor ran but stored no rows — check its Input.`;
+  } else {
+    lastStrategy = list.length > 0
+      ? `${list.length} run(s) found, none SUCCEEDED (newest is ${list[0]?.status})`
+      : 'no runs found for this Actor';
+  }
   return [];
 }
 
