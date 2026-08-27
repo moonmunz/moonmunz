@@ -98,6 +98,8 @@ export async function refresh({ onProgress = () => {} } = {}) {
     .slice(0, cfg.http.maxDetailFetches);
 
   let credsMissing = false;
+  let compFailures = 0;
+  let firstCompError = null;
 
   for (const lot of needPricing) {
     const queryInfo = buildQuery(lot.title);
@@ -121,7 +123,21 @@ export async function refresh({ onProgress = () => {} } = {}) {
           summary.warnings.push(err.message);
           continue;
         }
-        summary.errors.push(`comp lookup failed for "${queryInfo.query}": ${err.message}`);
+        // A misconfigured comp source fails identically for every item, so
+        // reporting it per item buries the one fact that matters. Record the
+        // first, count the rest, and stop hammering a source that is clearly
+        // not going to answer.
+        compFailures++;
+        if (!firstCompError) {
+          firstCompError = err.message;
+          summary.errors.push(`Comp lookup failed: ${err.message}`);
+        }
+        if (compFailures >= 3) {
+          summary.errors.push(
+            `Gave up on comps after ${compFailures} identical failures — fix the comp source in Settings, then refresh.`
+          );
+          break;
+        }
         continue;
       }
     }

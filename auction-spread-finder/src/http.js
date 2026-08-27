@@ -48,14 +48,37 @@ export async function fetchText(url, opts = {}) {
       ...opts,
     });
     if (!res.ok) {
-      const err = new Error(`HTTP ${res.status} ${res.statusText} for ${redactUrl(url)}`);
+      // APIs explain rejections in the body -- which field was wrong, what was
+      // expected. Discarding it leaves a bare status code that nobody can act
+      // on, so read it and put it in the message.
+      let detail = '';
+      try {
+        const body = (await res.text()).slice(0, 400);
+        const parsed = safeJson(body);
+        const message = parsed?.error?.message ?? parsed?.message ?? parsed?.error ?? body;
+        if (message) detail = ` — ${scrubSecrets(String(message)).trim()}`;
+      } catch {
+        // Body unreadable; the status alone will have to do.
+      }
+
+      const err = new Error(`HTTP ${res.status} ${res.statusText} for ${redactUrl(url)}${detail}`);
       err.status = res.status;
+      err.detail = detail;
       throw err;
     }
     return await res.text();
   } finally {
     clearTimeout(timer);
   }
+}
+
+function safeJson(text) {
+  try { return JSON.parse(text); } catch { return null; }
+}
+
+/** Error bodies can echo the request; never let a credential through. */
+function scrubSecrets(s) {
+  return s.replace(/(apify_api_|token=|Bearer )\S+/gi, '$1***');
 }
 
 export async function fetchJson(url, opts = {}) {
