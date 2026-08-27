@@ -1,4 +1,5 @@
 import { fetchJson } from '../http.js';
+import { normalizeActorId } from '../sources/apify.js';
 
 /**
  * eBay comps via an Apify Actor, as an alternative to eBay's official API.
@@ -37,7 +38,7 @@ export async function searchCompsViaApify(query, cfg) {
   }
 
   const api = c.apiBase ?? cfg.apify?.apiBase ?? DEFAULT_API;
-  const id = encodeURIComponent(c.actorId.trim().replace('/', '~'));
+  const id = encodeURIComponent(normalizeActorId(c.actorId));
   const input = substituteQuery(c.inputTemplate ?? { searchTerms: ['{{query}}'] }, query);
 
   const url = `${api}/acts/${id}/run-sync-get-dataset-items`

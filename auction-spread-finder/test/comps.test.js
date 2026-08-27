@@ -130,3 +130,32 @@ test('the same Actor returning real lots works fine', async () => {
   ];
   assert.equal(normalizeItems(lots).length, 2);
 });
+
+test('Actor IDs survive being pasted in every plausible form', async () => {
+  const { normalizeActorId } = await import('../src/sources/apify.js');
+  const want = 'crawloop~ebay-sold-listings-scraper';
+
+  assert.equal(normalizeActorId(want), want);
+  assert.equal(normalizeActorId('crawloop/ebay-sold-listings-scraper'), want);
+  assert.equal(normalizeActorId('apify.com/crawloop/ebay-sold-listings-scraper'), want);
+  assert.equal(normalizeActorId('https://apify.com/crawloop/ebay-sold-listings-scraper'), want);
+  assert.equal(normalizeActorId('  crawloop/ebay-sold-listings-scraper  '), want);
+  assert.equal(normalizeActorId('https://apify.com/crawloop/ebay-sold-listings-scraper/input'), want);
+
+  // The exact thing a user pasted: a URL followed by the instructions around it.
+  assert.equal(
+    normalizeActorId('apify.com/crawloop/ebay-sold-listings-scraper becomes crawloop~ebay-sold-listings-scraper'),
+    want
+  );
+
+  // Console URLs carry an opaque id instead of owner/name.
+  assert.equal(normalizeActorId('console.apify.com/actors/kkkH4GVW4Uqsazxo4'), 'kkkH4GVW4Uqsazxo4');
+  assert.equal(normalizeActorId('lulzasaur/auctionninja-scraper'), 'lulzasaur~auctionninja-scraper');
+});
+
+test('an unusable Actor ID is named, not sent onward as a broken URL', async () => {
+  const { normalizeActorId } = await import('../src/sources/apify.js');
+  for (const bad of ['', '   ', null, undefined, '???', '/']) {
+    assert.throws(() => normalizeActorId(bad), /Actor ID/i, `should reject ${JSON.stringify(bad)}`);
+  }
+});

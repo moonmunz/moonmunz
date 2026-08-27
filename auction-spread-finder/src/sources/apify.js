@@ -47,9 +47,7 @@ export async function fetchFromApify(cfg, { onProgress = () => {} } = {}) {
     throw err;
   }
 
-  // The API path wants a tilde, but people copy "username/actor-name" from the
-  // browser URL. Accept either.
-  const id = encodeURIComponent(actorId.trim().replace('/', '~'));
+  const id = encodeURIComponent(normalizeActorId(actorId));
 
   let items;
   if (mode === 'last') {
@@ -201,6 +199,47 @@ async function lastRunItems(API, id, token, maxItems) {
       : 'no runs found for this Actor';
   }
   return [];
+}
+
+/**
+ * Turn whatever someone pasted into an Actor identifier the API accepts.
+ *
+ * People paste store URLs, console URLs, owner/name pairs, and -- because
+ * instructions get copied wholesale -- a URL followed by prose. Take the first
+ * whitespace-delimited token, strip any host prefix, and convert the separator.
+ * Anything still unrecognizable is rejected by name rather than sent onward to
+ * become a confusing 404.
+ */
+export function normalizeActorId(raw) {
+  if (typeof raw !== 'string' || !raw.trim()) {
+    const err = new Error('No Actor ID set. Paste one from the Actor\'s page in Apify Console.');
+    err.code = 'BAD_ACTOR_ID';
+    throw err;
+  }
+
+  let id = raw.trim().split(/\s+/)[0];              // drop any trailing prose
+  id = id.replace(/^https?:\/\//i, '');             // protocol
+  id = id.replace(/^console\.apify\.com\/actors\//i, '');
+  id = id.replace(/^apify\.com\//i, '');
+  id = id.replace(/[?#].*$/, '');                   // query string or fragment
+  id = id.replace(/\/(input|runs|api|source|issues|reviews)\/?$/i, ''); // tab suffixes
+  id = id.replace(/\/+$/, '');                      // trailing slash
+  id = id.replace('/', '~');                        // owner/name -> owner~name
+
+  // Either "owner~name" or a bare console id.
+  const ok = /^[A-Za-z0-9][A-Za-z0-9._-]*~[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id)
+    || /^[A-Za-z0-9]{6,}$/.test(id);
+
+  if (!ok) {
+    const err = new Error(
+      `"${raw.trim().slice(0, 60)}" is not a valid Actor ID. ` +
+      `Use just the owner and name, like crawloop~ebay-sold-listings-scraper — ` +
+      `not a sentence or a partial URL.`
+    );
+    err.code = 'BAD_ACTOR_ID';
+    throw err;
+  }
+  return id;
 }
 
 /** Records which route produced the data, for the diagnostic message. */
