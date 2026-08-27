@@ -74,9 +74,10 @@ async function loadConfig() {
 
 /** Show only the credential fields the chosen comp source actually needs. */
 function syncCompFields() {
-  const useApify = $('setCompSource').value === 'apify';
-  $('compApifyPanel').hidden = !useApify;
-  $('ebayKeysRow').hidden = useApify;
+  const source = $('setCompSource').value;
+  // 'auto' uses both, so both sets of credentials have to be reachable.
+  $('compApifyPanel').hidden = source === 'ebay-api';
+  $('ebayKeysRow').hidden = source === 'apify';
 }
 
 /** Actor input only matters when we're triggering runs ourselves. */
@@ -272,7 +273,7 @@ function renderLot(lot) {
           <span class="k">+ premium/tax${v.premiumSource === 'listing' ? '' : ' *'}</span>
           <span class="v">${v.hasBid ? money2(v.buyCost.total) : '—'}</span>
         </div>
-        <div><span class="k">eBay median ask</span><span class="v">${money2(v.market.askMedian)}</span></div>
+        <div><span class="k">${v.compBasis === 'sold' ? 'eBay median sold' : 'eBay median ask'}</span><span class="v">${money2(v.market.askMedian)}</span></div>
         <div><span class="k">Est. sale price</span><span class="v">${money2(v.market.estimatedSalePrice)}</span></div>
         <div><span class="k">− eBay fees/ship</span><span class="v">${money2(v.sell.net)}</span></div>
         <div><span class="k">ROI</span><span class="v">${v.roi != null ? `${Math.round(v.roi * 100)}%` : '—'}</span></div>

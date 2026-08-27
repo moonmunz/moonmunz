@@ -13,8 +13,11 @@ import { fetchJson, fetchText } from '../http.js';
  * the same return shape and the rest of the app picks it up unchanged.
  */
 
-const OAUTH_URL = 'https://api.ebay.com/identity/v1/oauth2/token';
-const BROWSE_URL = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
+// EBAY_API_BASE points these at a mock so the comp path can be exercised
+// without live credentials; unset, they are eBay's production endpoints.
+const API_BASE = process.env.EBAY_API_BASE || 'https://api.ebay.com';
+const OAUTH_URL = `${API_BASE}/identity/v1/oauth2/token`;
+const BROWSE_URL = `${API_BASE}/buy/browse/v1/item_summary/search`;
 
 let tokenCache = { token: null, expiresAt: 0 };
 

@@ -97,6 +97,12 @@ const DEFAULTS = {
    *                 realized prices rather than asking prices.
    */
   comps: {
+    /**
+     * 'auto' is the best of both: sold prices where they exist (real
+     * transactions, no guessed discount), and eBay's free API as a backstop
+     * for items with no recent completed sale. It also spends nothing on
+     * items the paid source already answered.
+     */
     source: 'ebay-api',
     apify: {
       actorId: '',
@@ -252,7 +258,7 @@ export function saveSettings(patch) {
   }
   if (patch.comps) {
     next.comps = { ...existing.comps };
-    if (patch.comps.source === 'apify' || patch.comps.source === 'ebay-api') {
+    if (['apify', 'ebay-api', 'auto'].includes(patch.comps.source)) {
       next.comps.source = patch.comps.source;
     }
     if (patch.comps.apify) {

@@ -38,11 +38,13 @@
     <label class="field">
       <span class="field-label">Where price comparisons come from</span>
       <span class="field-help">
-        eBay's own API needs a developer account they approve by hand. Apify works immediately.
+        Sold prices are what buyers actually paid. eBay's free API returns asking
+        prices, which run high on antiques, so those get discounted before use.
       </span>
       <select id="setCompSource">
-        <option value="ebay-api">eBay API (needs approved developer keys)</option>
-        <option value="apify">Apify eBay scraper (no eBay approval needed)</option>
+        <option value="auto">Best of both — sold prices, falling back to eBay API (recommended)</option>
+        <option value="ebay-api">eBay API only — free, but asking prices</option>
+        <option value="apify">Apify only — real sold prices, costs per lookup</option>
       </select>
     </label>
 

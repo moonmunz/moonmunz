@@ -2,8 +2,7 @@ import { loadConfig } from './config.js';
 import { Store } from './store.js';
 import { scrapeSource } from './sources/auctionninja.js';
 import { fetchFromApify } from './sources/apify.js';
-import { searchActive } from './comps/ebay.js';
-import { searchCompsViaApify } from './comps/apify-ebay.js';
+import { fetchComps } from './comps/index.js';
 import { buildQuery, scoreConfidence } from './match.js';
 import { estimateMarketPrice, evaluateLot } from './economics.js';
 
@@ -105,17 +104,22 @@ export async function refresh({ onProgress = () => {} } = {}) {
     const queryInfo = buildQuery(lot.title);
     const cacheKey = `ebay:${queryInfo.query.toLowerCase()}`;
 
-    let comps = store.getComps(cacheKey, cfg.ebay.compCacheHours);
+    let cached = store.getComps(cacheKey, cfg.ebay.compCacheHours);
+    let comps = Array.isArray(cached) ? cached : cached?.comps;
+    // Whether these are sold prices decides if the ask discount applies, so it
+    // has to survive caching alongside them.
+    let isSold = Array.isArray(cached) ? false : Boolean(cached?.isSold);
+
     if (comps) {
       summary.compsCached++;
     } else {
       if (credsMissing) continue;
       try {
         onProgress(`Comping "${queryInfo.query}"`);
-        comps = cfg.comps?.source === 'apify'
-          ? await searchCompsViaApify(queryInfo.query, cfg)
-          : await searchActive(queryInfo.query, cfg);
-        store.putComps(cacheKey, comps);
+        const result = await fetchComps(queryInfo.query, cfg, { onProgress });
+        comps = result.comps;
+        isSold = result.isSold;
+        store.putComps(cacheKey, { comps, isSold, usedSource: result.usedSource });
         summary.compLookups++;
       } catch (err) {
         if (err.code === 'NO_EBAY_CREDS' || err.code === 'NO_APIFY_COMP_ACTOR' || err.code === 'NO_APIFY_TOKEN') {
@@ -149,15 +153,19 @@ export async function refresh({ onProgress = () => {} } = {}) {
       : cfg.economics;
 
     // Sold comps are realized prices, so they must not be discounted again by
-    // the ask-to-sale ratio -- that would understate every spread.
-    if (cfg.comps?.source === 'apify' && cfg.comps.apify?.isSoldData) {
-      econ = { ...econ, askToSaleRatio: 1.0 };
-    }
+    // the ask-to-sale ratio -- that would understate every spread. Decided per
+    // item, since a fallback to active listings can happen for any one of them.
+    if (isSold) econ = { ...econ, askToSaleRatio: 1.0 };
 
     const confidence = scoreConfidence(lot, queryInfo, comps);
     const market = estimateMarketPrice(comps, econ);
     const valuation = evaluateLot(lot, market, econ, cfg.filters);
-    if (valuation) valuation.premiumSource = lot.buyersPremiumPct != null ? 'listing' : 'config';
+    if (valuation) {
+      valuation.premiumSource = lot.buyersPremiumPct != null ? 'listing' : 'config';
+      // Sold vs asking changes how much the estimate is worth trusting, so the
+      // UI shows it rather than presenting both as the same kind of number.
+      valuation.compBasis = isSold ? 'sold' : 'asking';
+    }
 
     store.upsertLot({
       ...lot,
