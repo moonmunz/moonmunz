@@ -15,7 +15,7 @@ import { searchCompsViaApify } from './apify-ebay.js';
  * exist, free coverage where they don't, and spends nothing on items the paid
  * source can already answer.
  */
-export async function fetchComps(query, cfg, { onProgress = () => {} } = {}) {
+export async function fetchComps(query, cfg, { onProgress = () => {}, queryInfo = null } = {}) {
   const source = cfg.comps?.source ?? 'ebay-api';
   const minComps = cfg.filters?.minCompCount ?? 3;
 
@@ -29,7 +29,28 @@ export async function fetchComps(query, cfg, { onProgress = () => {} } = {}) {
     return { comps, isSold: false, usedSource: 'ebay-api' };
   }
 
-  // auto: sold first, active as backstop.
+  /**
+   * auto: sold data is slow and billed per listing, so spend it where it can
+   * change an answer. A title naming a real maker -- Ethan Allen, Gorham,
+   * Herman Miller -- comps precisely enough that a real sale price matters. A
+   * title like "Three Drawer Dresser Purple Drawers" will produce scattered
+   * comps whichever source answers, and the free API is as good a guess at a
+   * fraction of the time and none of the cost.
+   */
+  const hasMaker = (queryInfo?.matchedBrands?.length ?? 0) > 0;
+  if (!hasMaker) {
+    try {
+      const comps = await searchActive(query, cfg);
+      if (comps.length >= minComps) {
+        return { comps, isSold: false, usedSource: 'ebay-api', skippedSold: 'no recognized maker' };
+      }
+      // Too thin even from the free source -- fall through and try paid.
+    } catch {
+      // eBay unavailable; the paid path below is the remaining option.
+    }
+  }
+
+  // sold first, active as backstop.
   let soldError = null;
   try {
     const comps = await searchCompsViaApify(query, cfg);

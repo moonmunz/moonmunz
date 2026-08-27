@@ -130,7 +130,7 @@ export async function refresh({ onProgress = () => {} } = {}) {
       }
       try {
         onProgress(`Comping "${queryInfo.query}"`);
-        const result = await fetchComps(queryInfo.query, cfg, { onProgress });
+        const result = await fetchComps(queryInfo.query, cfg, { onProgress, queryInfo });
         comps = result.comps;
         isSold = result.isSold;
         store.putComps(cacheKey, { comps, isSold, usedSource: result.usedSource });
